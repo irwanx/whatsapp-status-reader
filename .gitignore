@@ -1,3 +1,4 @@
 /node_modules
 package-lock.json
-/auth
+auth/*
+store_multi.json

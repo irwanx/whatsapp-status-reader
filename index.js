@@ -1,134 +1,190 @@
-import baileys from '@whiskeysockets/baileys'
-import express from 'express'
-import P from 'pino'
-import qrcode from 'qrcode'
-
-var qrwa = null
-var PORT = process.env.PORT || 80 || 8080 || 3000
-const app = express()
-app.enable('trust proxy')
-app.set("json spaces", 2)
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-app.all('*', async (req, res) => {
-    if (qrwa) return res.type('.jpg').send(qrwa)
-    res.send('QRCODE BELUM TERSEDIA. SILAHKAN REFRESH TERUS MENERUS')
-})
-app.listen(PORT, async () => {
-    console.log(`express listen on port ${PORT}`)
-})
-
+import baileys from '@whiskeysockets/baileys';
+import { Boom } from "@hapi/boom";
+import NodeCache from "node-cache";
+import readline from 'readline'
+import pino from "pino";
 const {
-    default: makeWASocket,
-    fetchLatestBaileysVersion,
+    makeWASocket,
     useMultiFileAuthState,
-    delay,
+    fetchLatestBaileysVersion,
     makeCacheableSignalKeyStore,
-    jidNormalizedUser,
-    DisconnectReason
+    DisconnectReason,
+    delay,
+    proto,
+    Browsers
 } = baileys
 
-const startSock = async () => {
-    const { state, saveCreds } = await useMultiFileAuthState('auth')
-    const { version, isLatest } = await fetchLatestBaileysVersion()
-    console.log(`using WA v${version.join('.')}, isLatest: ${isLatest}`)
+const logger = pino({
+    timestamp: () => `,"time":"${new Date().toJSON()}"`
+}).child({});
+logger.level = "silent";
+
+const useStore = !process.argv.includes("--no-store");
+const usePairingCode = process.argv.includes('--pairing-code');
+
+const msgRetryCounterCache = new NodeCache();
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+const question = text => new Promise(resolve => rl.question(text, resolve));
+
+async function connectoWhatsapps() {
+    const { state, saveCreds } = await useMultiFileAuthState("auth");
+    const { version, isLatest } = await fetchLatestBaileysVersion();
 
     const sock = makeWASocket({
         version,
-        logger: P({ level: 'silent' }),
-        printQRInTerminal: true,
-        browser: ["Auto Read Status", '3.0'],
+        logger,
+        printQRInTerminal: !usePairingCode,
+        browser: Browsers.ubuntu('CHROME'),
         auth: {
             creds: state.creds,
-            keys: makeCacheableSignalKeyStore(state.keys, P({ level: "fatal" }).child({ level: "fatal" })),
+            keys: makeCacheableSignalKeyStore(state.keys, logger)
         },
-        markOnlineOnConnect: false,
+        msgRetryCounterCache,
         generateHighQualityLinkPreview: true,
-        getMessage: async (key) => {
-            let jid = jidNormalizedUser(key.remoteJid)
-            let msg = await store.loadMessage(jid, key.id)
+        patchMessageBeforeSending,
+        getMessage
+    });
 
-            return msg?.message || ""
-        },
-    })
+    if (usePairingCode && !sock.authState.creds.registered) {
+        var phoneNumber = await question(`Silakan masukkan nomor WhatsApp Anda: `)
+        if (/\d/.test(phoneNumber)) {
+            const code = await sock.requestPairingCode(
+                phoneNumber.replace(/[^0-9]/g, "")
+            );
+            console.log("jika ada notif whatsapp [Memasukkan kode menautkan perangkat baru] maka sudah di pastikan berhasil!");
+            console.log(`Pairing code: ${code.match(/.{1,4}/g).join("-")}`);
+        } else {
+            console.log("Nomor telepon tidak valid.");
+            process.exit();
+        }
+    }
 
-    sock.ev.process(
-        async (events) => {
-            if (events['connection.update']) {
-                const update = events['connection.update']
-                const { connection, lastDisconnect, qr } = update
-                if (connection) {
-                    console.info(`Connection Status : ${connection}`)
+    sock.ev.on("connection.update", function ({ connection, lastDisconnect }) {
+        switch (connection) {
+            case "close":
+                switch (new Boom(lastDisconnect?.error)?.output?.statusCode) {
+                    case DisconnectReason.badSession:
+                        console.log(
+                            `Bad Session File, hapus session dan scan scan lagi.`
+                        );
+                        process.exit();
+                        break;
+                    case DisconnectReason.connectionClosed:
+                        console.log(
+                            "Connection closed, menyambungkan kembali..."
+                        );
+                        connectoWhatsapps();
+                        break;
+                    case DisconnectReason.connectionLost:
+                        console.log(
+                            "Connection Lost from Server, menyambungkan kembali..."
+                        );
+                        connectoWhatsapps();
+                        break;
+                    case DisconnectReason.connectionReplaced:
+                        console.log(
+                            "Connection Replaced, sesi baru lainnya dibuka dan terhubung kembali..."
+                        );
+                        connectoWhatsapps();
+                        break;
+                    case DisconnectReason.loggedOut:
+                        console.log(`Device Logged Out, scan ulang lagi.`);
+                        process.exit();
+                        break;
+                    case DisconnectReason.restartRequired:
+                        console.log("Restart Required, memulai ulang...");
+                        connectoWhatsapps();
+                        break;
+                    case DisconnectReason.timedOut:
+                        console.log(
+                            "Connection TimedOut, menyambungkan kembali..."
+                        );
+                        connectoWhatsapps();
+                        break;
+                    case DisconnectReason.Multidevicemismatch:
+                        console.log("Multi device mismatch, scan ulang lagi.");
+                        process.exit();
+                        break;
+                    default:
+                        console.log(``);
                 }
-                if (qr) {
-                    let qrkode = await qrcode.toDataURL(qr, { scale: 20 })
-                    qrwa = Buffer.from(qrkode.split`,`[1], 'base64')
-                }
+                break;
+            case "connecting":
+                console.log(
+                    `using WA v${version.join(".")}, isLatest ${isLatest}`
+                );
+                break;
+            case "open":
+                console.log(" Nama :", sock.user.name);
+                console.log(" Nomor:", sock.user.id.split(":")[0]);
+                rl.close();
+                break;
+            default:
+        }
+    });
 
-                if (connection === 'open') qrwa = null
-                if (connection === 'close') {
-                    qrwa = null
-                    if ((lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut) {
-                        await startSock()
-                    } else {
-                        console.log('Device Logged Out, Please Scan Again And Run.')
-                        process.exit(1)
-                    }
-                }
+    sock.ev.on("creds.update", function () {
+        saveCreds();
+    });
+
+    sock.ev.on("messages.upsert", async function ({ messages, type }) {
+        var type, msgg, body;
+        for (let msg of messages) {
+            if (msg.message) {
+                type = Object.entries(msg.message)[0][0];
+                msgg = (type == 'viewOnceMessageV2') ? msg.message[type].message[Object.entries(msg.message[type].message)[0][0]] : msg.message[type];
+                body = (type == 'conversation') ? msgg : (type == 'extendedTextMessage') ? msgg.text : (type == 'imageMessage') && msgg.caption ? msgg.caption : (type == 'videoMessage') && msgg.caption ? msgg.caption : (type == 'templateButtonReplyMessage') && msgg.selectedId ? msgg.selectedId : (type == 'buttonsResponseMessage') && msgg.selectedButtonId ? msgg.selectedButtonId : (type == 'listResponseMessage') && msgg.singleSelectReply.selectedRowId ? msgg.singleSelectReply.selectedRowId : '';
             }
-
-            if (events['presence.update']) {
-                await sock.sendPresenceUpdate('unavailable')
+            if (msg.key.remoteJid === 'status@broadcast') {
+                if (msg.message?.protocolMessage) return;
+                console.log(`Lihat status ${msg.pushName} ${msg.key.participant.split('@')[0]}\n`);
+                await sock.readMessages([msg.key]);
+                await delay(1000);
+                return sock.readMessages([msg.key]);
             }
-
-            if (events['messages.upsert']) {
-                const upsert = events['messages.upsert']
-                var type, msgg, body
-                for (let msg of upsert.messages) {
-                    if (msg.message) {
-                        type = Object.entries(msg.message)[0][0]
-                        msgg = (type == 'viewOnceMessageV2') ? msg.message[type].message[Object.entries(msg.message[type].message)[0][0]] : msg.message[type]
-                        body = (type == 'conversation') ? msgg : (type == 'extendedTextMessage') ? msgg.text : (type == 'imageMessage') && msgg.caption ? msgg.caption : (type == 'videoMessage') && msgg.caption ? msgg.caption : (type == 'templateButtonReplyMessage') && msgg.selectedId ? msgg.selectedId : (type == 'buttonsResponseMessage') && msgg.selectedButtonId ? msgg.selectedButtonId : (type == 'listResponseMessage') && msgg.singleSelectReply.selectedRowId ? msgg.singleSelectReply.selectedRowId : ''
-                    }
-                    if (msg.key.remoteJid === 'status@broadcast') {
-                        if (msg.message?.protocolMessage) return
-                        console.log(`Lihat status ${msg.pushName} ${msg.key.participant.split('@')[0]}\n`)
-                        await sock.readMessages([msg.key])
-                        await delay(1000)
-                        return sock.readMessages([msg.key])
-                    }
-                    if (msg.key.remoteJid.endsWith('@s.whatsapp.net')) {
-                        if (msg.message?.protocolMessage) return
-                        console.log(`Pesan baru\nDari : ${msg.pushName}\nNomor : ${msg.key.remoteJid.split('@')[0]}\nPesan: ${body}\n`)
-                        sock.sendPresenceUpdate('recording', msg.key.remoteJid)
-                        await delay(1000)
-                        return sock.sendPresenceUpdate('recording', msg.key.remoteJid)
-                    }
-                }
-            }
-
-            if (events['call']) {
-                async function call(json) {
-                    for (const id of json) {
-                        if (id.status === "offer") {
-                            await sock.sendMessage(id.from, {
-                                text: `Maaf untuk saat ini, Saya tidak dapat menerima panggilan, entah dalam group atau pribadi\n\nJika Membutuhkan bantuan ataupun silahkan chat`,
-                                mentions: [id.from],
-                            })
-                            await sock.rejectCall(id.id, id.from)
-                        }
-                        console.log(`Ada panggilan masuk ngab\nDari : ${id.from.split("@")[0]}\n`)
-                    }
-                }
-                return await call(events['call'])
-            }
-
-            if (events['creds.update']) {
-                await saveCreds()
+            if (msg.key.remoteJid.endsWith('@s.whatsapp.net')) {
+                if (msg.message?.protocolMessage) return;
+                console.log(`Pesan baru\nDari : ${msg.pushName}\nNomor : ${msg.key.remoteJid.split('@')[0]}\nPesan: ${body}\n`);
             }
         }
-    )
-    return sock
+    });
+
+    return sock;
+
+    function patchMessageBeforeSending(message) {
+        const requiresPatch = !!(
+            message.buttonsMessage ||
+            message.templateMessage ||
+            message.listMessage
+        );
+        if (requiresPatch) {
+            message = {
+                viewOnceMessage: {
+                    message: {
+                        messageContextInfo: {
+                            deviceListMetadataVersion: 2,
+                            deviceListMetadata: {}
+                        },
+                        ...message
+                    }
+                }
+            };
+        }
+        return message;
+    }
+
+    async function getMessage(key) {
+        if (store) {
+            const msg = await store.loadMessage(key.remoteJid, key.id);
+            return msg?.message || undefined;
+        }
+        return proto.Message.fromObject({});
+    }
 }
-startSock()
-process.on('uncaughtException', console.error)
+
+connectoWhatsapps();

@@ -1,13 +1,12 @@
 {
   "name": "whatsapp-status-reader",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Selamat datang di Repositori whatsapp-status-reader!",
   "main": "index.js",
   "type": "module",
+  "homepage": "https://github.com/irwanx/whatsapp-status-reader",
   "dependencies": {
-    "@whiskeysockets/baileys": "latest",
-    "express": "latest",
-    "qrcode": "latest",
+    "@whiskeysockets/baileys": "git+https://github.com/WhiskeySockets/Baileys.git",
     "qrcode-terminal": "^0.12.0"
   },
   "scripts": {
