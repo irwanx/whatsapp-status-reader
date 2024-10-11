@@ -1,20 +1,31 @@
 # WhatsApp Status Reader
 
-Selamat datang di Repositori whatsapp-status-reader!
+Selamat datang di Repositori **WhatsApp Status Reader**!
 
 ## Deskripsi
 
-Repositori ini berisi kode sumber untuk bot WhatsApp otomatis yang dirancang untuk membaca status WhatsApp dengan mudah dan otomatis. Dengan bot ini, Anda dapat dengan cepat memantau status WhatsApp teman, keluarga, atau kontak Anda tanpa perlu melihatnya satu per satu.
+Repositori ini berisi kode sumber untuk **bot WhatsApp otomatis** yang dirancang untuk membaca status WhatsApp dengan mudah dan otomatis. Dengan bot ini, Anda dapat dengan cepat memantau status WhatsApp teman, keluarga, atau kontak Anda tanpa perlu melihatnya satu per satu. Ini adalah solusi ideal bagi siapa pun yang ingin tetap terhubung tanpa harus memeriksa setiap status secara manual.
 
-## Cara Menggunakan
+## Fitur Utama
 
-- **Prasyarat**: Pastikan Anda memiliki [`GIT`](https://git-scm.com/downloads) & [`NodeJS`](https://nodejs.org/en/download) yang sudah terinstal.
+- **Membaca Status Otomatis**: Pantau status WhatsApp tanpa usaha manual.
+- **Mudah Digunakan**: Proses instalasi dan penggunaan yang sederhana.
+- **Dukungan Baileys**: Menggunakan library Baileys untuk interaksi yang efisien dengan API WhatsApp.
+
+## Prasyarat
+
+Sebelum memulai, pastikan Anda telah menginstal:
+
+- [Git](https://git-scm.com/downloads)
+- [Node.js](https://nodejs.org/en/download) (disarankan untuk menggunakan versi terbaru)
+
+## Cara Menggunaka
 
 - **Klon Repositori Ini**:
 ```bash
 git clone https://github.com/irwanx/whatsapp-status-reader.git
 ```
-- Kemudian masuk ke direktori repositori dengan perintah:
+- **Masuk ke Direktori Repositori:**:
 ```bash
 cd whatsapp-status-reader
 ```
