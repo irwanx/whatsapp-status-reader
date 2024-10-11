@@ -12,8 +12,6 @@ import { handlePairingCode } from './utils/pairingCodeHandler.js';
 
 const msgRetryCounterCache = new NodeCache();
 const logger = createLogger();
-const app = express();
-app.use(express.json());
 
 export const usePairingCode = process.argv.includes('--pairing-code');
 
@@ -27,7 +25,6 @@ const store = makeInMemoryStore({
 
 export async function connectoWhatsapps() {
     console.log(`${chalk.yellow('🔗 Pairing Code Status:')} ${chalk.green(usePairingCode ? 'Enabled' : 'Disabled')}
-${chalk.yellow('🌐 Server Status:')} ${chalk.green(isServerMode ? 'Running' : 'Not Running')}
 `);
 
     const { state, saveCreds } = await useMultiFileAuthState("auth");
