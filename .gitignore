@@ -2,3 +2,4 @@
 package-lock.json
 auth/*
 store_multi.json
+yarn.lock
