@@ -22,7 +22,7 @@
   },
   "scripts": {
     "start": "node index.js --pairing-code",
-    "test": "echo \"No tests specified\" && exit 0"
+    "qr": "node index.js"
   },
   "keywords": [
     "whatsapp",
