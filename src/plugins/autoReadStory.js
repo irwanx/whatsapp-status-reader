@@ -1,6 +1,6 @@
 import { config } from "../../config.js"
 
-export default async function statusLogger({ m, sock }) {
+export default async function autoReadStory({ m, sock }) {
   if(config.autoReadStory === false) return
   if (m.chat !== 'status@broadcast') return
 
