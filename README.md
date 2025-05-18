@@ -1,29 +1,55 @@
-# WhatsApp Status Reader
+# 📱 WhatsApp Status Reader
 
-Selamat datang di Repositori **WhatsApp Status Reader**!
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E=18.0.0-brightgreen)](https://nodejs.org/)
+[![Baileys](https://img.shields.io/badge/Powered_by-Baileys-blue)](https://github.com/WhiskeySockets/Baileys)
+[![Author](https://img.shields.io/badge/Author-irwanx-blue)](https://github.com/irwanx)
 
-## Deskripsi
+Selamat datang di repositori **WhatsApp Status Reader** — sebuah bot WhatsApp otomatis yang dirancang untuk membaca dan memantau status WhatsApp secara efisien.
 
-Repositori ini berisi kode sumber untuk **bot WhatsApp otomatis** yang dirancang untuk membaca status WhatsApp dengan mudah dan otomatis. Dengan bot ini, Anda dapat dengan cepat memantau status WhatsApp teman, keluarga, atau kontak Anda tanpa perlu melihatnya satu per satu. Ini adalah solusi ideal bagi siapa pun yang ingin tetap terhubung tanpa harus memeriksa setiap status secara manual.
+---
 
-## Fitur Utama
+## 📝 Deskripsi
 
-- **Membaca Status Otomatis**: Pantau status WhatsApp tanpa usaha manual.
-- **Mudah Digunakan**: Proses instalasi dan penggunaan yang sederhana.
-- **Dukungan Baileys**: Menggunakan library Baileys untuk interaksi yang efisien dengan API WhatsApp.
+**WhatsApp Status Reader** adalah bot berbasis Node.js yang memungkinkan Anda memantau status WhatsApp teman, keluarga, atau kontak lainnya secara otomatis. Tanpa perlu membuka aplikasi WhatsApp secara manual, bot ini akan menampilkan informasi status terbaru langsung ke terminal Anda.
 
-## Prasyarat
+Solusi ini cocok bagi Anda yang ingin:
+- Tetap update dengan status teman tanpa harus membuka setiap satu per satu.
+- Membuat sistem pemantauan atau integrasi WhatsApp pribadi.
 
-Sebelum memulai, pastikan Anda telah menginstal:
+---
+
+## 🚀 Fitur Utama
+
+- ✅ **Pemantauan Status Otomatis**  
+  Bot akan membaca status WhatsApp secara real-time tanpa interaksi manual.
+
+- ⚙️ **Integrasi dengan Baileys**  
+  Memanfaatkan pustaka [Baileys](https://github.com/WhiskeySockets/Baileys) untuk koneksi yang stabil dan handal dengan WhatsApp Web.
+
+- 🧩 **Sistem Plugin Modular**  
+  Dukungan sistem plugin agar bot dapat dikembangkan sesuai kebutuhan.
+
+- 🟢 **Mudah Digunakan & Dikembangkan**  
+  Dirancang agar developer dapat langsung menjalankan dan mengembangkan sesuai kasus penggunaan.
+
+---
+
+## 📦 Prasyarat
+
+Pastikan Anda telah menginstal:
 
 - [Git](https://git-scm.com/downloads)
-- [Node.js](https://nodejs.org/en/download) (disarankan untuk menggunakan versi terbaru)
+- [Node.js](https://nodejs.org/en/download) – disarankan versi terbaru LTS
 
-## Cara Menggunaka
+---
 
-- **Klon Repositori Ini**:
+## 🛠️ Cara Menggunakan
+
+### 1. Klon Repositori
 ```bash
 git clone https://github.com/irwanx/whatsapp-status-reader.git
+
 ```
 - **Masuk ke Direktori Repositori:**:
 ```bash
@@ -32,10 +58,24 @@ cd whatsapp-status-reader
 - **Instal Dependensi**:
 ```bash
 npm install
+# atau
+yarn install
 ```
-- **Jalankan**:
+- **Jalankan**: dengan pairing code
 ```bash
-node index.js
+npm start
+# atau
+yarn start
 ```
-## LISENSI
+atau dengan qr
+```bash
+npm qr
+# atau
+yarn qr
+```
+
+## 🤝 Kontribusi
+Kontribusi sangat terbuka! Jika Anda ingin menambahkan fitur baru, memperbaiki bug, atau meningkatkan dokumentasi, silakan buat Pull Request atau buka Issue terlebih dahulu
+
+## 📄LISENSI
 Proyek ini dilisensikan di bawah Lisensi MIT - lihat file [LISENSI](LICENSE) untuk detailnya.

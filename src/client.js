@@ -4,6 +4,7 @@ import * as fs from "fs";
 import fetch from 'node-fetch'
 
 import baileys from '@whiskeysockets/baileys';
+import { config } from '../config.js';
 const {
     jidNormalizedUser,
     downloadContentFromMessage,
@@ -12,11 +13,8 @@ const {
 } = baileys
 
 function client({
-    sock,
-    store
+    sock
 }) {
-    delete store.groupMetadata;
-
     const saveStreamToFile = (stream, file) => new Promise((resolve, reject) => {
         const writable = stream.pipe(fs.createWriteStream(file))
         writable.once('finish', () => {
@@ -38,10 +36,6 @@ function client({
             !!stream.readable &&
             !isReadableFinished(stream)
         ) || stream instanceof fs.ReadStream || stream instanceof Readable;
-    }
-
-    for (let v in store) {
-        sock[v] = store[v];
     }
 
     const client = Object.defineProperties(sock, {
@@ -162,7 +156,7 @@ function client({
                 }, {
                     quoted,
                     ...options,
-                    ephemeralExpiration: 86400
+                    ephemeralExpiration: config.ephemeral
                 })
             },
             writable: true,
