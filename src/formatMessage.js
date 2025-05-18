@@ -34,17 +34,22 @@ export function formatMessage(msg, sock) {
   }
 
   const prefix = config.prefix.test(text) ? text.match(config.prefix)[0] : "#";
-  let command = text && text.replace(prefix, "").trim().split(/ +/).shift();
-  let args =
-    text
-      .trim()
-      .replace(new RegExp("^" + escapeRegExp(prefix), "i"), "")
-      .replace(command, "")
-      .split(/ +/)
-      .filter((a) => a) || [];
-    if(command && command.startsWith(prefix)) {
-        text = m.args.join(" ");
-    }
+  let command = null;
+let args = [];
+
+if (text) {
+  command = text.replace(prefix, "").trim().split(/ +/).shift();
+  args = text
+    .trim()
+    .replace(new RegExp("^" + escapeRegExp(prefix), "i"), "")
+    .replace(command, "")
+    .split(/ +/)
+    .filter((a) => a);
+  if (command && command.startsWith(prefix)) {
+    text = args.join(" ");
+  }
+}
+
 
   return {
     key: msg.key,
