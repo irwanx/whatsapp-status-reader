@@ -1,28 +1,26 @@
 {
   "name": "whatsapp-status-reader",
-  "version": "1.4.0",
-  "description": "Aplikasi untuk membaca status WhatsApp dengan menggunakan library Baileys. Mudah digunakan dan terintegrasi dengan API WhatsApp.",
+  "version": "1.5.0",
+  "description": "Aplikasi untuk membaca status WhatsApp menggunakan library Baileys. Mudah digunakan dan terintegrasi dengan API WhatsApp.",
   "main": "index.js",
   "type": "module",
-  "homepage": "https://github.com/irwanx/whatsapp-status-reader",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/irwanx/whatsapp-status-reader.git"
-  },
-  "bugs": {
-    "url": "https://github.com/irwanx/whatsapp-status-reader/issues"
-  },
-  "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.17",
-    "chalk": "^5.3.0",
-    "file-type": "^19.5.0",
-    "node-cache": "^5.1.2",
-    "node-fetch": "^3.3.2",
-    "qrcode-terminal": "^0.12.0"
-  },
   "scripts": {
     "start": "node index.js --pairing-code",
-    "qr": "node index.js"
+    "qr": "node index.js",
+    "dev": "nodemon index.js --pairing-code",
+    "test": "node test.js"
+  },
+  "directories": {
+    "plugins": "src/plugins",
+    "src": "src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/irwanx/whatsapp-status-reader.git"
+  },
+  "homepage": "https://github.com/irwanx/whatsapp-status-reader",
+  "bugs": {
+    "url": "https://github.com/irwanx/whatsapp-status-reader/issues"
   },
   "keywords": [
     "whatsapp",
@@ -30,17 +28,20 @@
     "baileys",
     "status",
     "reader",
-    "api"
+    "bot"
   ],
   "author": "Irwan X Yans",
   "license": "MIT",
   "engines": {
     "node": ">=14.0.0"
   },
-  "preferGlobal": false,
-  "private": false,
-  "files": [
-    "index.js",
-    "README.md"
-  ]
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.17",
+    "chalk": "^5.3.0",
+    "file-type": "^19.5.0",
+    "node-cache": "^5.1.2",
+    "node-fetch": "^3.3.2",
+    "qrcode-terminal": "^0.12.0",
+    "syntax-error": "^1.4.0"
+  }
 }

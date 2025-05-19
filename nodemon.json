@@ -1,0 +1,6 @@
+{
+  "watch": ["src/plugins", "src"],
+  "ignore": ["auth", "session"],
+  "ext": "js,json",
+  "exec": "node index.js"
+}

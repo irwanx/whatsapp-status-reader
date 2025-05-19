@@ -35,28 +35,31 @@ export function formatMessage(msg, sock) {
 
   const prefix = config.prefix.test(text) ? text.match(config.prefix)[0] : "#";
   let command = null;
-let args = [];
+  let args = [];
 
-if (text) {
-  command = text.replace(prefix, "").trim().split(/ +/).shift();
-  args = text
-    .trim()
-    .replace(new RegExp("^" + escapeRegExp(prefix), "i"), "")
-    .replace(command, "")
-    .split(/ +/)
-    .filter((a) => a);
-  if (command && command.startsWith(prefix)) {
-    text = args.join(" ");
+  if (text) {
+    command = text.replace(prefix, "").trim().split(/ +/).shift();
+    args = text
+      .trim()
+      .replace(new RegExp("^" + escapeRegExp(prefix), "i"), "")
+      .replace(command, "")
+      .split(/ +/)
+      .filter((a) => a);
+    if (command && command.startsWith(prefix)) {
+      text = args.join(" ");
+    }
   }
-}
 
+  const fromMe = msg.key.fromMe || jid === sock.user.id;
+  const isBaileys = !!fromMe;
 
   return {
     key: msg.key,
     id: msg.key.id,
     chat: jid,
     sender: msg.key.participant || jid,
-    fromMe: msg.key.fromMe || jid === sock.user.id,
+    fromMe,
+    isBaileys,
     name: msg.pushName || "",
     isGroup,
     isUser,
@@ -67,5 +70,19 @@ if (text) {
     args,
     timestamp: msg.messageTimestamp,
     raw: msg,
+    reply: async (text, options = {}) => {
+      try {
+        if (!jid || !text) {
+          throw new Error("Chat ID or text is undefined.");
+        }
+        await sock.sendMessage(
+          jid,
+          { text },
+          { quoted: msg, ephemeralExpiration: config.ephemeral, ...options }
+        );
+      } catch (error) {
+        console.error("Error replying to message:", error);
+      }
+    },
   };
 }

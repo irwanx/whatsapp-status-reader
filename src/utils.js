@@ -29,19 +29,19 @@ export function logUserInfo(sock) {
 
 export async function handleIncomingMessages(messages, sock) {
   for (const msg of messages) {
-    const m = formatMessage(msg, sock)
-    if (!m && !m.fromMe) continue;
+    const m = formatMessage(msg, sock);
+    if (!m && m.isBaileys) continue;
     for (const plugin of plugins) {
       try {
         if (plugin.command) {
           if (plugin.command.includes(m.command)) {
-            await plugin.default({ m, sock })
+            await plugin.default({ m, sock });
           }
         } else {
-          await plugin.default({ m, sock })
+          await plugin.default({ m, sock });
         }
       } catch (err) {
-        console.error(`❌ Plugin error:`, err)
+        console.error(`❌ Plugin error:`, err);
       }
     }
   }
