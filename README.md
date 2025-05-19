@@ -77,5 +77,5 @@ yarn qr
 ## 🤝 Kontribusi
 Kontribusi sangat terbuka! Jika Anda ingin menambahkan fitur baru, memperbaiki bug, atau meningkatkan dokumentasi, silakan buat Pull Request atau buka Issue terlebih dahulu
 
-## 📄LISENSI
+## 📄Lisensi
 Proyek ini dilisensikan di bawah Lisensi MIT - lihat file [LISENSI](LICENSE) untuk detailnya.

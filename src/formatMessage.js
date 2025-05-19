@@ -33,11 +33,11 @@ export function formatMessage(msg, sock) {
     };
   }
 
-  const prefix = config.prefix.test(text) ? text.match(config.prefix)[0] : "#";
+  const prefix = config.prefix.test(text) ? text.match(config.prefix)[0] : "";
   let command = null;
   let args = [];
 
-  if (text) {
+  if (text && prefix) {
     command = text.replace(prefix, "").trim().split(/ +/).shift();
     args = text
       .trim()
