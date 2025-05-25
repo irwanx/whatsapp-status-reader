@@ -1,7 +1,3 @@
-export function escapeRegExp(string) {
-  return string.replace(/[.*=+:\-?^${}()|[\]\\]|\s/g, "\\$&");
-}
-
 export function emojiStringToArray(str) {
   const spl = str.split(/([\uD800-\uDBFF][\uDC00-\uDFFF])/);
   const arr = [];

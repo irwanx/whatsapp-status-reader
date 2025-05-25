@@ -29,60 +29,96 @@ export function logUserInfo(sock) {
 
 export async function handleIncomingMessages(messages, sock) {
   for (const msg of messages) {
-    const m = formatMessage(msg, sock);
-    if (!m && m.isBaileys) continue;
-    for (const plugin of plugins) {
-      try {
-        if (plugin.command) {
-          if (plugin.command.includes(m.command)) {
-            await plugin.default({ m, sock });
+    try {
+      const m = formatMessage(msg, sock);
+
+      if (!m || m.isBaileys) continue;
+
+      const commandPlugins = plugins.filter((p) => p.command);
+      const nonCommandPlugins = plugins.filter((p) => !p.command);
+
+      if (m.prefix && m.command) {
+        for (const plugin of commandPlugins) {
+          try {
+            if (plugin.command.includes(m.command.toLowerCase())) {
+              await plugin.default({ m, sock });
+            }
+          } catch (err) {
+            console.error(
+              `❌ Command plugin error (${plugin.command.join(",")}):`,
+              err
+            );
           }
-        } else {
-          await plugin.default({ m, sock });
         }
-      } catch (err) {
-        console.error(`❌ Plugin error:`, err);
       }
+
+      if (!m.prefix || !m.command) {
+        for (const plugin of nonCommandPlugins) {
+          try {
+            await plugin.default({ m, sock });
+          } catch (err) {
+            console.error(`❌ Non-command plugin error (${plugin.name}):`, err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("❌ Message processing error:", err);
     }
   }
 }
 
-export const handlePairingCode = async (sock, usePairingCode) => {
-  if (usePairingCode && !sock.authState.creds.registered) {
-    const phoneNumber = await question(
-      `Silakan masukkan nomor WhatsApp Anda: `
-    );
-    if (/\d/.test(phoneNumber)) {
-      const code = await sock.requestPairingCode(
-        phoneNumber.replace(/[^0-9]/g, "")
-      );
-      console.log(
-        chalk.green(
-          "jika ada notif whatsapp [Memasukkan kode menautkan perangkat baru] maka sudah di pastikan berhasil!"
-        )
-      );
-      console.log(
-        chalk.cyan(`Pairing code: ${code.match(/.{1,4}/g).join("-")}`)
-      );
-    } else {
-      console.log("Nomor telepon tidak valid.");
-      process.exit();
-    }
-  }
-  closeQuestionInterface();
+const buatInterface = () => {
+  return readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
 };
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
+const validasiNomor = (nomor) => {
+  const bersih = nomor.replace(/[^0-9]/g, '');
+  return bersih.length >= 10 && bersih.length <= 15;
+};
 
-export const question = (text) =>
-  new Promise((resolve) => rl.question(text, resolve));
+const formatKodePairing = (kode) => kode.match(/.{1,4}/g).join('-');
 
-export function closeQuestionInterface() {
-  rl.close();
-}
+export const handlePairingCode = async (sock, gunakanPairingCode) => {
+  if (!gunakanPairingCode || sock.authState.creds.registered) return;
+
+  const rl = buatInterface();
+  const tanya = (teks) => new Promise((resolve) => rl.question(teks, resolve));
+
+  try {
+    console.log(chalk.yellow('Perlu registrasi perangkat\n'));
+
+    let nomorWhatsApp;
+    while (true) {
+      nomorWhatsApp = await tanya(chalk.blue('Masukkan nomor WhatsApp (contoh: 628123456789): '));
+      if (validasiNomor(nomorWhatsApp)) break;
+      console.log(chalk.red('Nomor tidak valid. Harap masukkan 10-15 digit.'));
+    }
+
+    const nomorBersih = nomorWhatsApp.replace(/[^0-9]/g, '');
+    console.log(chalk.green('\nMeminta kode pairing...'));
+    
+    const kode = await sock.requestPairingCode(nomorBersih);
+    
+    console.log(chalk.green('\n✅ Kode pairing berhasil dibuat!'));
+    console.log(chalk.cyan('\n------------------------------'));
+    console.log(chalk.whiteBright('  Cek WhatsApp untuk:'));
+    console.log(chalk.whiteBright('  notifikasi "Tautkan perangkat baru"'));
+    console.log(chalk.cyan('------------------------------'));
+    console.log(chalk.yellow('Kode Pairing Anda:'), chalk.bold.whiteBright(formatKodePairing(kode)));
+    console.log(chalk.cyan('------------------------------'));
+
+  } catch (error) {
+    console.error(chalk.red('\n❌ Gagal mendapatkan kode pairing:'), error.message);
+    if (error.message.includes('registered')) {
+      console.log(chalk.yellow('Nomor ini mungkin sudah terdaftar di perangkat lain.'));
+    }
+  } finally {
+    rl.close();
+  }
+};
 
 export function patchMessageBeforeSending(message) {
   if (

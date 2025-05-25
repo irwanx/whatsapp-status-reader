@@ -8,54 +8,96 @@ import {
 import NodeCache from "node-cache";
 import chalk from "chalk";
 
-import { createLogger } from "./src/logger.js";
 import {
   patchMessageBeforeSending,
   getMessage,
   handlePairingCode,
 } from "./src/utils.js";
 import client from "./src/client.js";
-import {
-  handleConnectionUpdate,
-  handleMessageUpsertEvent,
-} from "./src/events.js";
+import ConnectionHandler from "./src/events.js";
+import pino from "pino";
 
 const msgRetryCounterCache = new NodeCache();
-const logger = createLogger();
+const logger = pino({
+  timestamp: () => `,"time":"${new Date().toJSON()}"`,
+}).child({});
+logger.level = "silent";
 
 export const usePairingCode = process.argv.includes("--pairing-code");
 
-export async function connectoWhatsapps() {
-  console.log(`${chalk.yellow("🔗 Pairing Code Status:")} ${chalk.green(
-    usePairingCode ? "Enabled" : "Disabled"
-  )}
-`);
+export class WhatsAppConnector {
+  constructor() {
+    this.sock = null;
+    this.state = null;
+    this.saveCreds = null;
+  }
 
-  const { state, saveCreds } = await useMultiFileAuthState("auth");
-  const { version, isLatest } = await fetchLatestBaileysVersion();
+  async initialize() {
+    try {
+      console.log(
+        `${chalk.yellow("🔗 Pairing Code Status:")} ${chalk.green(
+          usePairingCode ? "Enabled" : "Disabled"
+        )}\n`
+      );
 
-  const sock = makeWASocket({
-    version,
-    logger,
-    printQRInTerminal: !usePairingCode,
-    browser: Browsers.ubuntu("CHROME"),
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, logger),
-    },
-    msgRetryCounterCache,
-    generateHighQualityLinkPreview: true,
-    patchMessageBeforeSending,
-    getMessage,
-  });
+      const authState = await useMultiFileAuthState("auth");
+      this.state = authState.state;
+      this.saveCreds = authState.saveCreds;
 
-  await handlePairingCode(sock, usePairingCode);
-  handleConnectionUpdate(sock, version, isLatest);
-  client({ sock });
-  handleMessageUpsertEvent(sock);
-  sock.ev.on("creds.update", saveCreds);
+      const versionInfo = await fetchLatestBaileysVersion();
 
-  return sock;
+      this.sock = this.createSocket(versionInfo.version);
+
+      await handlePairingCode(this.sock, usePairingCode);
+
+      this.setupEventHandlers(versionInfo);
+
+      client({ sock: this.sock });
+
+      return this.sock;
+    } catch (error) {
+      console.error(
+        chalk.red("❌ Failed to initialize WhatsApp connection:"),
+        error
+      );
+      throw error;
+    }
+  }
+
+  createSocket(version) {
+    return makeWASocket({
+      version,
+      logger,
+      printQRInTerminal: !usePairingCode,
+      browser: Browsers.macOS("Safari"),
+      auth: {
+        creds: this.state.creds,
+        keys: makeCacheableSignalKeyStore(this.state.keys, logger),
+      },
+      msgRetryCounterCache,
+      generateHighQualityLinkPreview: true,
+      patchMessageBeforeSending,
+      getMessage,
+    });
+  }
+
+  setupEventHandlers(versionInfo) {
+    new ConnectionHandler(
+      this.sock,
+      versionInfo,
+      this.initialize.bind(this)
+    ).initialize();
+
+    this.sock.ev.on("creds.update", this.saveCreds);
+  }
 }
 
-connectoWhatsapps();
+(async () => {
+  try {
+    const connector = new WhatsAppConnector();
+    await connector.initialize();
+  } catch (error) {
+    console.error(chalk.red("❌ Application failed to start:"), error);
+    process.exit(1);
+  }
+})();
