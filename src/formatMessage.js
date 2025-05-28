@@ -120,7 +120,7 @@ export function formatMessage(msg, sock) {
     chat: jid,
     sender: msg.key.participant || jid,
     fromMe: msg.key.fromMe || jid === sock.user?.id,
-    isBaileys: msg.key.fromMe || jid === sock.user?.id,
+    isBaileys: msg.key.id.startsWith("3EB0") || false,
     name: msg.pushName || "",
     isGroup: jid.endsWith("@g.us"),
     isUser: jid.endsWith("@s.whatsapp.net"),
