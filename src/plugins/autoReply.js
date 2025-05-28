@@ -17,7 +17,7 @@ export default async function autoReply({ m }) {
     };
 
     for (const [pattern, reply] of Object.entries(autoReplies)) {
-      if (new RegExp(pattern, "i").test(text)) {
+      if (new RegExp(`^(${pattern})$`, "i").test(text)) {
         await m.reply(reply);
         return;
       }
