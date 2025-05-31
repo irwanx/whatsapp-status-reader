@@ -74,10 +74,10 @@ Jika ada yang ingin ditanyakan, jangan ragu untuk bertanya ke @${config.owner[0]
     if (!responseText) throw new Error("Respon AI kosong");
   } catch (e) {
     responseText = `
-📡 *DOBDABOT ONLINE*  
+📡 *${config.botName}*  
 Halo ${m.name}.
 
-Saya adalah *DOBDABOT* — sistem otomatis berbasis *JavaScript* yang telah aktif sejak *20 Desember 2020*. Dibangun untuk efisiensi, kecepatan, dan fleksibilitas dalam pengelolaan grup serta layanan otomatis.
+Saya adalah *${config.botName}* — sistem otomatis berbasis *JavaScript* yang telah aktif sejak *20 Desember 2020*. Dibangun untuk efisiensi, kecepatan, dan fleksibilitas dalam pengelolaan grup serta layanan otomatis.
 
 🛠 *Versi Bot:* ${pkg.version || "2.5.6"}
 
@@ -88,7 +88,7 @@ Saya adalah *DOBDABOT* — sistem otomatis berbasis *JavaScript* yang telah akti
 
 ⚠️ Bot ini beroperasi secara independen. Jika kamu bagian dari grup, pastikan mengikuti pedoman dan etika interaksi dengan sistem.
 
-Terima kasih telah terhubung. Ketik *menu* atau *help* untuk mulai eksplorasi.`;
+Terima kasih telah terhubung. Ketik */menu* atau */help* untuk mulai eksplorasi.`;
   }
 
   await m.reply(responseText.trim());
