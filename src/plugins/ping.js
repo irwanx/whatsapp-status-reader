@@ -1,7 +1,9 @@
 import { performance } from "perf_hooks";
 import os from "os";
 
-export const command = ["ping", "speed", "p"];
+export const command = ["ping", "speed"];
+export const help = ["ping", "speed"];
+export const tags = ["info"];
 
 export default async function ping({ m, sock }) {
   try {

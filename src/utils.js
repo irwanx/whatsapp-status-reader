@@ -44,7 +44,7 @@ export async function handleIncomingMessages(messages, sock) {
         for (const plugin of commandPlugins) {
           try {
             if (plugin.command.includes(m.command.toLowerCase())) {
-              await plugin.default({ m, sock });
+              await plugin.default({ m, sock, plugins });
             }
           } catch (err) {
             console.error(
@@ -58,7 +58,7 @@ export async function handleIncomingMessages(messages, sock) {
       if (!m.prefix || !m.command) {
         for (const plugin of nonCommandPlugins) {
           try {
-            await plugin.default({ m, sock });
+            await plugin.default({ m, sock, plugins });
           } catch (err) {
             console.error(`❌ Non-command plugin error (${plugin.name}):`, err);
           }

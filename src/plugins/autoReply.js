@@ -1,10 +1,10 @@
-import { config } from "../../config.js";
+import { config } from "../../config/config.js";
 
-export default async function autoReply({ m }) {
+export default async function autoReply({ m, sock }) {
   if (!m.text || m.key?.fromMe || m.isGroup || m.isBaileys) return;
 
   try {
-    const text = m.text.toLowerCase();
+    const text = m.body.toLowerCase() ?? m.text.toLowerCase();
 
     const autoReplies = {
       "^tes$": "On!",

@@ -1,7 +1,7 @@
 import chalk from "chalk";
-import { config } from "../../config.js";
 import { jidNormalizedUser } from "@whiskeysockets/baileys";
 import { emojiStringToArray, mathRandom } from "../functions.js";
+import { config } from "../../config/config.js";
 
 const storyTimestamps = new Map();
 

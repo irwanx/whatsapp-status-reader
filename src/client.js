@@ -4,7 +4,7 @@ import * as fs from "fs";
 import fetch from "node-fetch";
 
 import baileys from "@whiskeysockets/baileys";
-import { config } from "../config.js";
+import { config } from "../config/config.js";
 const { jidNormalizedUser, downloadContentFromMessage, toReadable, toBuffer } =
   baileys;
 

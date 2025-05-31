@@ -1,26 +1,22 @@
-import { config } from "../../config.js";
+import { readConfig } from "../../services/configService.js";
 
 export default async function autoPresence({ m, sock }) {
   try {
     if (!m || !sock) return;
-
+    const config = await readConfig();
     if (!config.autoPresence) return;
-
     if (!m.chat || typeof m.chat !== 'string') return;
-
     if (m.chat === "status@broadcast") return;
-
     if (m.key?.fromMe) return;
 
-    const isGroupChat = m.chat.endsWith("@g.us");
     const isPrivateChat = m.chat.endsWith("@s.whatsapp.net");
 
-    if (isPrivateChat || isGroupChat) {
+    if (isPrivateChat || m.isGroup) {
       const lastPresenceUpdate = sock.presenceUpdates?.[m.chat] || 0;
       const now = Date.now();
       
       if (now - lastPresenceUpdate > 30000) {
-        await sock.sendPresenceUpdate(config.autoPresence, m.chat);
+        await sock.sendPresenceUpdate(config.autoPresenceType, m.chat);
         
         if (!sock.presenceUpdates) sock.presenceUpdates = {};
         sock.presenceUpdates[m.chat] = now;

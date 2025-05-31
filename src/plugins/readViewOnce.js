@@ -1,8 +1,10 @@
 import { downloadContentFromMessage, WA_DEFAULT_EPHEMERAL } from "@whiskeysockets/baileys";
-import { config } from "../../config.js";
 import { fileTypeFromBuffer } from 'file-type';
+import { config } from "../../config/config.js";
 
 export const command = ["readonce", "readviewonce", "rvo", "r"];
+export const help = ["readonce <balas pesan view-once>"];
+export const tags = ["media"];
 
 const VIEW_ONCE_TYPES = {
   IMAGE: 'imageMessage',

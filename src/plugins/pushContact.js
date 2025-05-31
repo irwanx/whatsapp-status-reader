@@ -1,8 +1,10 @@
 import { delay, WA_DEFAULT_EPHEMERAL } from "@whiskeysockets/baileys";
-import { config } from "../../config.js";
 import axios from "axios";
+import { config } from "../../config/config.js";
 
 export const command = ["pushkontak", "pushContact", "pc"];
+export const help = ["pushkontak <pesan khusus>"];
+export const tags = ["group"];
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 menit cache
 const DELAY_BETWEEN_SENDS = 2000; // Delay 2 detik antar pengiriman
@@ -17,7 +19,7 @@ if (typeof global.pushContactState === "undefined") {
 
 const getCachedMetadata = async (sock, chatId) => {
   try {
-    sock.metadataCache ??= {};
+    sock.metadataCache = sock.metadataCache ?? {};
     const now = Date.now();
     const cache = sock.metadataCache[chatId];
 

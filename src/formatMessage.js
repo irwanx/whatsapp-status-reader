@@ -1,5 +1,5 @@
 import { extractMessageContent } from "@whiskeysockets/baileys";
-import { config } from "../config.js";
+import { config } from "../config/config.js";
 
 const unwrapMessage = (message) => {
   if (!message) return null;
@@ -114,6 +114,7 @@ export function formatMessage(msg, sock) {
     }
   }
 
+  const { prefix, command, args } = parseCommand(text);
   const messageInfo = {
     key: msg.key,
     id: msg.key.id,
@@ -124,8 +125,8 @@ export function formatMessage(msg, sock) {
     name: msg.pushName || "",
     isGroup: jid.endsWith("@g.us"),
     isUser: jid.endsWith("@s.whatsapp.net"),
-    text,
     body: text,
+    text: prefix ? args.join(" ") : text,
     type: getMessageType(messageContent),
     timestamp: msg.messageTimestamp,
     raw: msg,
@@ -137,8 +138,6 @@ export function formatMessage(msg, sock) {
   const quoted = context
     ? buildQuotedMessage(context, context.quotedMessage, sock, jid)
     : null;
-
-  const { prefix, command, args } = parseCommand(text);
 
   const mediaDetails = getMediaDetails(messageContent);
 
