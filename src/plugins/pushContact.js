@@ -17,7 +17,7 @@ if (typeof global.pushContactState === "undefined") {
 
 const getCachedMetadata = async (sock, chatId) => {
   try {
-    sock.metadataCache ??= {};
+    sock.metadataCache = sock.metadataCache ?? {};
     const now = Date.now();
     const cache = sock.metadataCache[chatId];
 
