@@ -131,7 +131,10 @@ export function formatMessage(msg, sock) {
     timestamp: msg.messageTimestamp,
     raw: msg,
     media: messageContent,
-    isOwner: config.owner.includes((msg.key.participant || jid).split("@")[0]),
+    isOwner:
+      msg.key.participant === sock.user.id.split(":")[0] + "@s.whatsapp.net"
+        ? msg.key.participant === sock.user.id.split(":")[0] + "@s.whatsapp.net"
+        : config.owner.includes((msg.key.participant || jid).split("@")[0]),
   };
 
   const context = messageContent?.extendedTextMessage?.contextInfo;

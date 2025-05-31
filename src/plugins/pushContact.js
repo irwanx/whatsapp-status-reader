@@ -1,319 +1,210 @@
 import { delay, WA_DEFAULT_EPHEMERAL } from "@whiskeysockets/baileys";
-import axios from "axios";
 import { config } from "../../config/config.js";
 
-export const command = ["pushkontak", "pushContact", "pc"];
+export const command = ["pushkontak", "pushcontact"];
 export const help = ["pushkontak <pesan khusus>"];
 export const tags = ["group"];
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 menit cache
-const DELAY_BETWEEN_SENDS = 2000; // Delay 2 detik antar pengiriman
-const COOLDOWN_MULTIPLIER = 1.5; // Faktor penambah waktu tunggu
+const CACHE_TTL = 5 * 60 * 1000;
+const DELAY_BETWEEN_SENDS = 3000;
+const MIN_COOLDOWN_MS = 60 * 1000;
+const COOLDOWN_MULTIPLIER = 1.5;
 
-if (typeof global.pushContactState === "undefined") {
-  global.pushContactState = {
-    activeGroups: {},
-    cooldownGroups: {},
-  };
-}
+/**
+ * Memformat durasi dalam milidetik menjadi string yang mudah dibaca.
+ * @param {number} ms Milidetik
+ * @returns {string} String format waktu
+ */
+const formatTime = (ms) => {
+  if (ms < 0) ms = 0;
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
 
-const getCachedMetadata = async (sock, chatId) => {
+  let timeString = "";
+  if (hours > 0) timeString += `${hours} jam `;
+  if (minutes > 0) timeString += `${minutes} menit `;
+  if (seconds > 0 || timeString === "") timeString += `${seconds} detik`;
+  return timeString.trim() || "0 detik";
+};
+
+/**
+ * Mengambil metadata grup dengan mekanisme caching.
+ * @param {object} sock Instance Baileys socket
+ * @param {string} chatId ID grup
+ * @returns {Promise<object>} Metadata grup
+ */
+const getGroupMetadataWithCache = async (sock, chatId) => {
+  sock.groupMetadataCache = sock.groupMetadataCache || {};
+
+  const now = Date.now();
+  const cachedEntry = sock.groupMetadataCache[chatId];
+
+  if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
+    return cachedEntry.metadata;
+  }
+
   try {
-    sock.metadataCache = sock.metadataCache ?? {};
-    const now = Date.now();
-    const cache = sock.metadataCache[chatId];
-
-    let isFromCache = true;
-
-    if (!cache || now - cache.timestamp > CACHE_TTL) {
-      const metadata = await sock.groupMetadata(chatId);
-      sock.metadataCache[chatId] = { metadata, timestamp: now };
-      isFromCache = false;
-      return { metadata, isFromCache };
+    const metadata = await sock.groupMetadata(chatId);
+    if (!metadata || !metadata.participants) {
+      throw new Error(
+        "Metadata grup tidak valid atau tidak memiliki partisipan."
+      );
     }
-
-    return { metadata: cache.metadata, isFromCache };
+    sock.groupMetadataCache[chatId] = { metadata, timestamp: now };
+    return metadata;
   } catch (error) {
-    console.error("[CACHE] Error metadata:", error);
+    console.error(
+      `[PushKontak Cache] Gagal mengambil metadata untuk ${chatId}:`,
+      error
+    );
     throw new Error("GAGAL_MENGAMBIL_DATA_GRUP");
   }
 };
 
-const fetchThumbnailBuffer = async () => {
-  const defaultThumbnail =
-    "https://www.irwanx.my.id/static/android-chrome-512x512.png";
-  const thumbnailUrl = config.thumbnailUrl || defaultThumbnail;
-
-  try {
-    const response = await axios.get(thumbnailUrl, {
-      responseType: "arraybuffer",
-      timeout: 10000,
-    });
-    return Buffer.from(response.data, "binary");
-  } catch (error) {
-    console.warn("❌ Gagal mengambil thumbnail utama, mencoba fallback");
-    try {
-      const response = await axios.get(defaultThumbnail, {
-        responseType: "arraybuffer",
-        timeout: 10000,
-      });
-      return Buffer.from(response.data, "binary");
-    } catch (fallbackError) {
-      console.error("❌ Gagal thumbnail fallback:", fallbackError.message);
-      return null;
-    }
-  }
-};
-
-const getProgressBar = (percent) => {
-  const filled = Math.floor(percent / 10);
-  return `《 ${"■".repeat(filled)}${"□".repeat(10 - filled)} 》 ${percent}%`;
-};
-
-const sendContactPush = async (sock, jid, customText, thumbBuffer) => {
-  try {
-    await sock.sendMessage(
-      jid,
-      {
-        text: `*📢 Broadcast dari Grup*\n\n${customText}`,
-        contextInfo: {
-          forwardingScore: 9999,
-          isForwarded: true,
-          mentionedJid: [jid],
-          externalAdReply: {
-            title: "Pesan Grup",
-            body: "Pesan otomatis dari grup",
-            mediaType: 1,
-            previewType: "PHOTO",
-            thumbnail: thumbBuffer || undefined,
-            sourceUrl: config.linkFakeUrl || "https://www.irwanx.my.id",
-          },
-        },
-      },
-      { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
-    );
-    return true;
-  } catch (error) {
-    console.error(`[KIRIM] Gagal ke ${jid}: ${error.message}`);
-    return false;
-  }
-};
-
-const updateProgress = async (
-  sock,
-  chatId,
-  messageKey,
-  sent,
-  total,
-  cacheStatus,
-  estimatedTime
-) => {
-  try {
-    const percent = Math.floor((sent / total) * 100);
-    const progressBar = getProgressBar(percent);
-    const cacheInfo = cacheStatus ? "(data cache)" : "(data baru)";
-    const timeRemaining = estimatedTime - sent * DELAY_BETWEEN_SENDS;
-
-    await sock.sendMessage(
-      chatId,
-      {
-        text: `📨 Progress: *${sent}/${total}* ${cacheInfo}\n${progressBar}\n🕒 Perkiraan sisa: ${formatTime(
-          timeRemaining
-        )}`,
-        edit: messageKey,
-      },
-      { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
-    );
-
-    await delay(500);
-  } catch (error) {
-    console.warn("[PROGRESS] Gagal update progress:", error.message);
-  }
-};
-
-const formatTime = (ms) => {
-  const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-
-  if (hours > 0) {
-    return `${hours} jam ${minutes % 60} menit`;
-  } else if (minutes > 0) {
-    return `${minutes} menit ${seconds % 60} detik`;
-  }
-  return `${seconds} detik`;
-};
-
-const isAdmin = (participants, senderId) => {
-  const participant = participants.find((p) => p.id === senderId);
-  return participant && participant.admin !== null;
-};
-
 export default async function pushContact({ m, sock }) {
+  sock.pushContactState = sock.pushContactState || {
+    activeGroups: {},
+    cooldownUntil: {},
+  };
+  const pluginState = sock.pushContactState;
+
   if (!m.isGroup) {
-    return sock.sendMessage(
-      m.chat,
-      { text: "❌ Perintah hanya bisa digunakan di grup!" },
-      { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
-    );
+    return m.reply("❌ Perintah ini hanya dapat digunakan di dalam grup!");
   }
 
   const groupId = m.chat;
   const senderId = m.sender;
-  const now = Date.now();
+  const currentTime = Date.now();
 
-  if (global.pushContactState.activeGroups[groupId]) {
-    const activeSince = global.pushContactState.activeGroups[groupId];
-    const elapsed = now - activeSince;
-
+  if (pluginState.activeGroups[groupId]) {
+    const timeElapsed = currentTime - pluginState.activeGroups[groupId];
     return sock.sendMessage(
-      groupId,
+      m.chat,
       {
-        text:
-          `⏳ Grup ini sedang dalam proses push kontak!\n` +
-          `🕒 Proses dimulai ${formatTime(elapsed)} yang lalu\n\n` +
-          `Silakan tunggu hingga proses selesai.`,
+        text: `⏳ Proses push kontak untuk grup ini masih berjalan.\nDimulai ${formatTime(
+          timeElapsed
+        )} yang lalu. Mohon tunggu hingga selesai.`,
       },
-      { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
+      {
+        quoted: m.raw,
+        ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL,
+      }
     );
   }
 
   if (
-    global.pushContactState.cooldownGroups[groupId] &&
-    global.pushContactState.cooldownGroups[groupId] > now
+    pluginState.cooldownUntil[groupId] &&
+    currentTime < pluginState.cooldownUntil[groupId]
   ) {
-    const cooldownEnd = global.pushContactState.cooldownGroups[groupId];
-    const remaining = cooldownEnd - now;
-
+    const remainingCooldown = pluginState.cooldownUntil[groupId] - currentTime;
     return sock.sendMessage(
-      groupId,
+      m.chat,
       {
-        text:
-          `⏱️ Grup ini baru saja melakukan push kontak!\n` +
-          `❌ Tunggu ${formatTime(
-            remaining
-          )} lagi sebelum bisa menggunakan fitur ini.`,
+        text: `⏱️ Grup ini sedang dalam masa cooldown.\nHarap tunggu ${formatTime(
+          remainingCooldown
+        )} lagi sebelum menggunakan perintah ini.`,
       },
-      { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
+      {
+        quoted: m.raw,
+        ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL,
+      }
     );
   }
 
+  pluginState.activeGroups[groupId] = currentTime;
+
   try {
-    global.pushContactState.activeGroups[groupId] = now;
+    const groupMetadata = await getGroupMetadataWithCache(sock, groupId);
 
-    const { metadata, isFromCache } = await getCachedMetadata(sock, groupId);
-    const participants = metadata.participants || [];
-    const totalParticipants = participants.length;
+    if (!m.isOwner)
+      m.reply("❌ Perintah ini hanya dapat digunakan oleh Owner Bot.");
 
-    if (!isAdmin(participants, senderId)) {
-      delete global.pushContactState.activeGroups[groupId];
-      return sock.sendMessage(
-        groupId,
-        { text: "❌ Hanya admin yang bisa menggunakan perintah ini!" },
-        { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
+    const botJid = sock.user?.id?.replace(/:.*$/, "") + "@s.whatsapp.net";
+
+    const recipients = groupMetadata.participants
+      .map((p) => p.id)
+      .filter((id) => id !== botJid && id !== senderId);
+
+    if (recipients.length === 0) {
+      return m.reply(
+        "❌ Tidak ada anggota lain di grup ini untuk dikirimi pesan."
       );
     }
 
-    if (totalParticipants === 0) {
-      delete global.pushContactState.activeGroups[groupId];
-      return sock.sendMessage(
-        groupId,
-        { text: "❌ Tidak ada anggota grup!" },
-        { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
-      );
-    }
+    const customMessage = m.text || "";
+    const totalRecipients = recipients.length;
+    const estimatedTimeMs = totalRecipients * DELAY_BETWEEN_SENDS;
+    const cooldownDurationMs = Math.max(
+      MIN_COOLDOWN_MS,
+      estimatedTimeMs * COOLDOWN_MULTIPLIER
+    );
 
-    const estimatedTime = totalParticipants * DELAY_BETWEEN_SENDS;
-    const cooldownTime = Math.max(60000, estimatedTime * COOLDOWN_MULTIPLIER);
-
-    const customText = m.args.join(" ") || "Tidak ada pesan khusus.";
-
-    const loadingMsg = await sock.sendMessage(
+    let mesg = await sock.sendMessage(
       groupId,
       {
-        text:
-          `⏳ Memulai proses push kontak...\n` +
-          `📊 Total anggota: ${totalParticipants}\n` +
-          `⏱️ Perkiraan selesai: ${formatTime(estimatedTime)}`,
+        text: `🚀 Memulai proses Push Kontak...\n\n👥 Total Target: ${totalRecipients} anggota\n💬 Pesan Anda: "${customMessage}"\n⏳ Estimasi Waktu Selesai: ${formatTime(
+          estimatedTimeMs
+        )}`,
       },
-      { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
-    );
-
-    let sentCount = 0;
-    let successCount = 0;
-
-    await updateProgress(
-      sock,
-      groupId,
-      loadingMsg.key,
-      0,
-      totalParticipants,
-      isFromCache,
-      estimatedTime
-    );
-
-    const thumbBuffer = await fetchThumbnailBuffer();
-
-    for (const participant of participants) {
-      const sendSuccess = await sendContactPush(
-        sock,
-        participant.id,
-        customText,
-        thumbBuffer
-      );
-
-      sentCount++;
-      if (sendSuccess) successCount++;
-
-      await updateProgress(
-        sock,
-        groupId,
-        loadingMsg.key,
-        sentCount,
-        totalParticipants,
-        isFromCache,
-        estimatedTime
-      );
-
-      await delay(DELAY_BETWEEN_SENDS);
-    }
-
-    await sock.sendMessage(
-      groupId,
       {
-        text: [
-          `✅ Push kontak selesai!`,
-          `- Total anggota: ${totalParticipants}`,
-          `- Berhasil dikirim: ${successCount}`,
-          `- Gagal: ${totalParticipants - successCount}`,
-          `\n⏱️ Cooldown aktif: ${formatTime(cooldownTime)}`,
-        ].join("\n"),
-        edit: loadingMsg.key,
-      },
-      { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
-    );
-
-    global.pushContactState.cooldownGroups[groupId] = now + cooldownTime;
-
-    setTimeout(() => {
-      if (global.pushContactState.cooldownGroups[groupId]) {
-        delete global.pushContactState.cooldownGroups[groupId];
+        quoted: m.raw,
+        ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL,
       }
-    }, cooldownTime);
-  } catch (error) {
-    console.error("[PUSH-CONTACT] Error:", error);
-    let errorMessage = "🚨 Terjadi kesalahan internal";
+    );
 
-    if (error.message.includes("GAGAL_MENGAMBIL_DATA_GRUP")) {
-      errorMessage = "❌ Gagal mengambil data grup, pastikan bot adalah admin";
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (let i = 0; i < totalRecipients; i++) {
+      const recipientJid = recipients[i];
+      const messageToSend = `📢 ${customMessage}\n\n[ BROADCAST ALL ]`;
+
+      try {
+        await sock.sendMessage(
+          recipientJid,
+          { text: messageToSend },
+          { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
+        );
+        successCount++;
+      } catch (err) {
+        failureCount++;
+        console.warn(
+          `[PushKontak] Gagal mengirim ke ${recipientJid} (Grup: ${groupId}): ${err.message}`
+        );
+      }
+
+      if (i < totalRecipients - 1) {
+        await delay(DELAY_BETWEEN_SENDS);
+      }
     }
+
+    pluginState.cooldownUntil[groupId] = currentTime + cooldownDurationMs;
 
     await sock.sendMessage(
       groupId,
-      { text: errorMessage },
-      { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
+      {
+        text: `✅ Push Kontak Selesai!\n\n👍 Berhasil Terkirim: ${successCount} anggota\n👎 Gagal Terkirim: ${failureCount} anggota\n\n⏱️ Grup ini akan memasuki masa cooldown selama ${formatTime(
+          cooldownDurationMs
+        )}.`,
+        edit: mesg.key,
+      },
+      {
+        quoted: m.raw,
+        ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL,
+      }
     );
+  } catch (error) {
+    console.error(`[PushKontak] Kesalahan utama di grup ${groupId}:`, error);
+    let userErrorMessage =
+      "🚨 Terjadi kesalahan internal saat menjalankan perintah Push Kontak.";
+    if (error.message === "GAGAL_MENGAMBIL_DATA_GRUP") {
+      userErrorMessage =
+        "❌ Gagal memuat data anggota grup. Pastikan Bot adalah anggota grup ini.";
+    }
+    await m.reply(userErrorMessage);
   } finally {
-    delete global.pushContactState.activeGroups[groupId];
+    delete pluginState.activeGroups[groupId];
   }
 }

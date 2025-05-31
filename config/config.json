@@ -11,7 +11,7 @@
   "autoReactStory": false,
   "reactEmote": "😱😧😡😆😨😐🐊😭😪",
   "autoPresence": false,
-  "firstChat": true,
+  "firstChat": false,
   "autoPresenceType": "composing",
   "thumbnailUrl": "https://www.irwanx.my.id/static/android-chrome-512x512.png",
   "linkFakeUrl": "https://www.irwanx.my.id"
