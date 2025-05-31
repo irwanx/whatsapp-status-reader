@@ -9,7 +9,7 @@ const LOG_COLORS = {
 
 export default async function logger({ m, type = "incoming" }) {
   try {
-    if (!m || m.chat === "status@broadcast" || m.key?.fromMe) return;
+    if (!m || m.chat === "status@broadcast" || m.fromMe) return;
 
     const isMedia = m.isMedia;
     const messageContent =

@@ -5,5 +5,7 @@ export const config = {
   autoReadStory: true,
   autoReactStory: true,
   reactEmote: "😱😧😡😆😨😐🐊😭😪",
-  autoPresence: "composing" /* 'recording,'*/, //Kosongi "" jika tidak mau ada Presence
+  autoPresence: "composing", /* 'recording,'*/ //Kosongi "" jika tidak mau ada Presence
+  thumbnailUrl: "https://www.irwanx.my.id/static/android-chrome-512x512.png",
+  linkFakeUrl: "https://www.irwanx.my.id"
 };
