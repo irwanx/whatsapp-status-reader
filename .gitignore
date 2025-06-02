@@ -4,3 +4,4 @@ auth
 store_multi.json
 yarn.lock
 database
+config/config.json

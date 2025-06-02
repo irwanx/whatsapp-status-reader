@@ -1,5 +1,5 @@
 export const command = ["menu", "help", "?"];
-export const help = ["menu", "help"];
+export const help = ["menu", "help", "?"];
 export const tags = ["main"];
 
 const tagIcons = {
@@ -32,9 +32,7 @@ export default async function showMenu({ m, plugins }) {
       if (!helpList.length) continue;
 
       for (const tag of tags) {
-        if (!tagGroups[tag]) {
-          tagGroups[tag] = [];
-        }
+        if (!tagGroups[tag]) tagGroups[tag] = [];
 
         helpList.forEach((hlp) => {
           if (!tagGroups[tag].includes(hlp)) {
@@ -52,30 +50,29 @@ export default async function showMenu({ m, plugins }) {
         return a.localeCompare(b);
       });
 
-    let helpMessage = "╭───< *MENU BANTUAN* >───╮\n";
-    helpMessage += `│ Hai *${m.name || "Pengguna"}*!\n`;
-    helpMessage += "│ Berikut adalah daftar perintah yang tersedia:\n";
-    helpMessage += "│\n";
+    let helpMessage = "╭──⧁ `DAFTAR MENU` ⧁──╮\n";
+    helpMessage += `│ Halo, ${m.name || "Pengguna"}!\n`;
+    helpMessage += `│ Berikut perintah yang tersedia:\n│\n`;
 
     sortedTags.forEach((tag, index) => {
       const icon = tagIcons[tag] || "📂";
-      const title = `${icon} *${tag.charAt(0).toUpperCase() + tag.slice(1)}*`;
-      helpMessage += `╭─「 ${title} 」\n`;
-      helpMessage += tagGroups[tag].map((cmd) => `│ 々 ${m.prefix}${cmd}`).join("\n");
+      const title = `${icon} \`${tag.charAt(0).toUpperCase() + tag.slice(1)}\``;
+
+      helpMessage += `╭─ ${title}\n`;
+      helpMessage += tagGroups[tag]
+        .map((cmd) => `│ ⤷ ${m.prefix}${cmd}`)
+        .join("\n");
       helpMessage += "\n";
       if (index < sortedTags.length - 1) {
         helpMessage += "│\n";
       }
     });
 
-    helpMessage += "╰─────────────✧";
+    helpMessage += "╰───────────────⧁";
 
     await m.reply(helpMessage.trim());
   } catch (err) {
     console.error("Error in help command:", err);
-
-    await m.reply(
-      "❌ Terjadi kesalahan saat mencoba menampilkan menu bantuan. Silakan coba lagi nanti."
-    );
+    await m.reply("❌ Gagal menampilkan menu. Coba lagi nanti.");
   }
 }

@@ -1,32 +1,55 @@
 import { patchConfig } from "../../services/configService.js";
 
-export const command = ["autoreadsw", "autoreactsw", "autopresence", "firstchat"];
+export const command = [
+  "autoreadsw",
+  "autoreactsw",
+  "autopresence",
+  "firstchat",
+  "public",
+  "publik",
+  "status",
+];
 export const help = [
   "autoreadsw on/off",
   "autoreactsw on/off",
   "autopresence on/off",
   "firstchat on/off",
+  "public on/off",
+  "status",
 ];
 export const tags = ["settings"];
 
-export default async function switchSetting({ m }) {
-  if(!m.isOwner) return m.reply("❌ Hanya owner yang dapat mengubah pengaturan ini.");
+export default async function switchSetting({ m, config }) {
+  if (!m.isOwner)
+    return m.reply("❌ Hanya owner yang dapat mengubah pengaturan ini.");
   const args = m.text.trim();
   const cmd = m.command?.toLowerCase();
   const option = args?.toLowerCase();
-
-  if (!["on", "off"].includes(option)) {
-    return m.reply(`Gunakan *.${cmd} on* atau *.${cmd} off*`);
-  }
-
-  const enable = option === "on";
 
   const settingMap = {
     autoreadsw: "autoReadStory",
     autoreactsw: "autoReactStory",
     autopresence: "autoPresence",
     firstchat: "firstChat",
+    public: "publicMode",
+    publik: "publicMode",
   };
+
+  if (cmd === "status") {
+    const statusList = Object.entries(settingMap).map(([cmdKey, configKey]) => {
+      const status = config[configKey] ? "✅ ON" : "❌ OFF";
+      return `• *${cmdKey}*: ${status}`;
+    });
+
+    return m.reply(
+      "*📊 Status Pengaturan Saat Ini:*\n\n" + statusList.join("\n")
+    );
+  }
+  if (!["on", "off"].includes(option)) {
+    return m.reply(`Gunakan *.${cmd} on* atau *.${cmd} off*`);
+  }
+
+  const enable = option === "on";
 
   const targetKey = settingMap[cmd];
   if (!targetKey) {

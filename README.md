@@ -54,6 +54,8 @@ git clone https://github.com/irwanx/whatsapp-status-reader.git --branch main
 
 ```
 
+### 2. Persiapan Awal
+
 - **Masuk ke Direktori Repositori:**:
 
 ```bash
@@ -68,7 +70,19 @@ npm install
 yarn install
 ```
 
-- **Jalankan**: dengan pairing code
+- **Konfigurasi Awal**
+
+Salin file contoh konfigurasi:
+
+```bash
+cp config/config.json.example config/config.json
+```
+
+Edit file `config.json` sesuai kebutuhan.
+
+### 3. Menjalankan Bot
+
+- **Mode Pairing Code**
 
 ```bash
 npm start
@@ -76,7 +90,7 @@ npm start
 yarn start
 ```
 
-atau dengan qr
+- **Mode QR Code**
 
 ```bash
 npm qr

@@ -52,7 +52,7 @@ export class WhatsAppConnector {
 
       this.setupEventHandlers(versionInfo);
 
-      client({ sock: this.sock });
+      client(this.sock);
 
       return this.sock;
     } catch (error) {

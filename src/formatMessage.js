@@ -1,5 +1,4 @@
 import { extractMessageContent } from "@whiskeysockets/baileys";
-import { config } from "../config/config.js";
 
 const unwrapMessage = (message) => {
   if (!message) return null;
@@ -64,7 +63,7 @@ const buildQuotedMessage = (context, quotedRaw, sock, originalJid) => {
   };
 };
 
-const parseCommand = (text) => {
+const parseCommand = (text, config) => {
   if (!text || !config.prefix.test(text))
     return { prefix: null, command: null, args: [] };
 
@@ -96,7 +95,7 @@ const getMediaDetails = (messageContent) => {
   };
 };
 
-export function formatMessage(msg, sock) {
+export async function formatMessage(msg, sock, config) {
   const jid = msg.key.remoteJid;
   const rawMessage = unwrapMessage(msg.message);
   const messageContent = rawMessage || {};
@@ -114,7 +113,7 @@ export function formatMessage(msg, sock) {
     }
   }
 
-  const { prefix, command, args } = parseCommand(text);
+  const { prefix, command, args } = parseCommand(text, config);
   const messageInfo = {
     key: msg.key,
     id: msg.key.id,

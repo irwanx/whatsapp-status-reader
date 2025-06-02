@@ -4,7 +4,7 @@ export const command = ["ai"];
 export const help = ["ai <pertanyaan>"];
 export const tags = ["ai"];
 
-export default async function aiPlugin({ m, sock }) {
+export default async function aiPlugin({ m }) {
   const text = m.text?.trim();
 
   if (!text) {

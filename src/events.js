@@ -43,6 +43,7 @@ class ConnectionHandler {
 
   async handleDisconnection(error) {
     const errorCode = new Boom(error)?.output?.statusCode;
+
     const handlers = {
       [DisconnectReason.badSession]: this.handleBadSession.bind(this),
       [DisconnectReason.connectionClosed]:
@@ -53,7 +54,7 @@ class ConnectionHandler {
       [DisconnectReason.loggedOut]: this.handleLoggedOut.bind(this),
       [DisconnectReason.restartRequired]: this.handleRestartRequired.bind(this),
       [DisconnectReason.timedOut]: this.handleTimedOut.bind(this),
-      [DisconnectReason.Multidevicemismatch]:
+      [DisconnectReason.multideviceMismatch]:
         this.handleMultideviceMismatch.bind(this),
     };
 
@@ -163,11 +164,14 @@ class ConnectionHandler {
   }
 
   logUserInfo() {
-    const user = this.sock.user;
-    console.log(
-      chalk.green("✅ Berhasil terhubung sebagai:"),
-      chalk.cyan(user?.name || user?.id || "Unknown")
-    );
+    if (this.sock.user) {
+      console.log(
+        chalk.green("✅ Terhubung sebagai:"),
+        chalk.cyan(this.sock.user.name || this.sock.user.id)
+      );
+    } else {
+      console.log(chalk.yellow("⚠️ Terhubung, tapi user info belum tersedia."));
+    }
   }
 }
 

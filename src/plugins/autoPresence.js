@@ -1,9 +1,7 @@
-import { readConfig } from "../../services/configService.js";
 
-export default async function autoPresence({ m, sock }) {
+export default async function autoPresence({ m, sock, config }) {
   try {
     if (!m || !sock) return;
-    const config = await readConfig();
     if (!config.autoPresence) return;
     if (!m.chat || typeof m.chat !== 'string') return;
     if (m.chat === "status@broadcast") return;

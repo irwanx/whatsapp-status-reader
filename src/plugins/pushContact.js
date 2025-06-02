@@ -165,7 +165,10 @@ export default async function pushContact({ m, sock }) {
         await sock.sendMessage(
           recipientJid,
           { text: messageToSend },
-          { ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL }
+          {
+            quoted: m.raw,
+            ephemeralExpiration: config.ephemeral || WA_DEFAULT_EPHEMERAL,
+          }
         );
         successCount++;
       } catch (err) {

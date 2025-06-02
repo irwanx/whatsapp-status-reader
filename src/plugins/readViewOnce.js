@@ -1,6 +1,5 @@
 import { downloadContentFromMessage, WA_DEFAULT_EPHEMERAL } from "@whiskeysockets/baileys";
 import { fileTypeFromBuffer } from 'file-type';
-import { config } from "../../config/config.js";
 
 export const command = ["readonce", "readviewonce", "rvo", "r"];
 export const help = ["readonce <balas pesan view-once>"];
@@ -25,7 +24,7 @@ _Mungkin media sudah tidak tersedia atau kedaluwarsa._`,
 ╰─`
 };
 
-export default async function readViewOnce({ m, sock }) {
+export default async function readViewOnce({ m, sock, config }) {
   try {
     if (!m.quoted?.raw) {
       return await m.reply(ERROR_MESSAGES.NOT_QUOTED);

@@ -1,5 +1,4 @@
 import axios from "axios";
-import { readConfig } from "../../services/configService.js";
 import { pcService } from "../../services/userServices.js";
 import path from 'path';
 import fs from 'fs';
@@ -7,10 +6,9 @@ import fs from 'fs';
 const packageJsonPath = path.resolve(process.cwd(), "package.json");
 const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
 
-export default async function firstChat({ m }) {
+export default async function firstChat({ m, config }) {
   if (m.chat.endsWith("@broadcast") || m.fromMe || m.isGroup) return;
 
-  const config = await readConfig();
   if (!config.firstChat) return;
 
   const jid = m.chat;
