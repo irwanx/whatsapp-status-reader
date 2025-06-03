@@ -42,22 +42,10 @@ export async function handleIncomingMessages(messages, sock) {
 
       logger({ m, type: "incoming" });
 
-      const alwaysAllowedCommands = [
-        "public",
-        "publik",
-        "autoreadsw",
-        "autoreactsw",
-        "autopresence",
-        "firstchat",
-        "status",
-      ];
-
       if (m.prefix && m.command) {
         const lowerCommand = m.command.toLowerCase();
 
-        const isAlwaysAllowed = alwaysAllowedCommands.includes(lowerCommand);
-
-        if ((config.publicMode || m.isOwner) || isAlwaysAllowed) {
+        if (config.publicMode ? m.isOwner ? true : false : true) {
           for (const plugin of commandPlugins) {
             try {
               if (plugin.command.includes(lowerCommand)) {

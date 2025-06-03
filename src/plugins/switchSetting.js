@@ -20,8 +20,7 @@ export const help = [
 export const tags = ["settings"];
 
 export default async function switchSetting({ m, config }) {
-  if (!m.isOwner)
-    return m.reply("❌ Hanya owner yang dapat mengubah pengaturan ini.");
+  if (!m.isOwner) return;
   const args = m.text.trim();
   const cmd = m.command?.toLowerCase();
   const option = args?.toLowerCase();

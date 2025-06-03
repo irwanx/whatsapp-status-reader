@@ -3,7 +3,7 @@ export default async function autoReply({ m, config }) {
   if (
     isBlockedByPrivateMode ||
     !m.text ||
-    m.key?.fromMe ||
+    m.fromMe ||
     m.isGroup ||
     m.isBaileys
   )

@@ -115,11 +115,6 @@ export async function formatMessage(msg, sock, config) {
 
   const { prefix, command, args } = parseCommand(text, config);
 
-  const senderId = (msg.key.participant || msg.key.remoteJid || "").split(
-    "@"
-  )[0];
-  const botNumber = sock.user.id.split(":")[0];
-
   const messageInfo = {
     key: msg.key,
     id: msg.key.id,
@@ -136,7 +131,9 @@ export async function formatMessage(msg, sock, config) {
     timestamp: msg.messageTimestamp,
     raw: msg,
     media: messageContent,
-    isOwner: config.owner.includes(senderId) || senderId === botNumber,
+    isOwner: msg.key.fromMe
+      ? true
+      : config.owner.includes((msg.key.participant || jid).split("@")[0]),
   };
 
   const context = messageContent?.extendedTextMessage?.contextInfo;

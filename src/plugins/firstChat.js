@@ -77,16 +77,7 @@ Halo ${m.name}.
 
 Saya adalah *${config.botName}* — sistem otomatis berbasis *JavaScript* yang telah aktif sejak *20 Desember 2020*. Dibangun untuk efisiensi, kecepatan, dan fleksibilitas dalam pengelolaan grup serta layanan otomatis.
 
-🛠 *Versi Bot:* ${pkg.version || "2.5.6"}
-
-👤 *Admin & Pengembang:*
-• @${config.owner[0] ?? ""} — Pengembang utama
-• @${config.owner[1] ?? ""} — Infrastruktur & backend
-• @${config.owner[2] ?? ""} — Server & pengawasan
-
-⚠️ Bot ini beroperasi secara independen. Jika kamu bagian dari grup, pastikan mengikuti pedoman dan etika interaksi dengan sistem.
-
-Terima kasih telah terhubung. Ketik */menu* atau */help* untuk mulai eksplorasi.`;
+🛠 *Versi Bot:* ${pkg.version || "2.5.6"}`;
   }
 
   await m.reply(responseText.trim());
