@@ -1,11 +1,10 @@
 import chalk from "chalk";
-import { config } from "../../config.js";
 import { jidNormalizedUser } from "@whiskeysockets/baileys";
 import { emojiStringToArray, mathRandom } from "../functions.js";
 
 const storyTimestamps = new Map();
 
-export default async function autoReadAndReactStory({ m, sock }) {
+export default async function autoReadAndReactStory({ m, sock, config }) {
   try {
     const isStatusBroadcast = m.chat === "status@broadcast";
     if (!isStatusBroadcast || m.raw?.message?.protocolMessage) return;

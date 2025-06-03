@@ -14,6 +14,7 @@ Selamat datang di repositori **WhatsApp Status Reader** — sebuah bot WhatsApp 
 **WhatsApp Status Reader** adalah bot berbasis Node.js yang memungkinkan Anda memantau status WhatsApp teman, keluarga, atau kontak lainnya secara otomatis. Tanpa perlu membuka aplikasi WhatsApp secara manual, bot ini akan menampilkan informasi status terbaru langsung ke terminal Anda.
 
 Solusi ini cocok bagi Anda yang ingin:
+
 - Tetap update dengan status teman tanpa harus membuka setiap satu per satu.
 - Membuat sistem pemantauan atau integrasi WhatsApp pribadi.
 
@@ -46,28 +47,58 @@ Pastikan Anda telah menginstal:
 
 ## 🛠️ Cara Menggunakan
 
-### 1. Klon Repositori
+### 1. Klon Repositori (default branch `master`)
+
+Jika kamu ingin membuat bot dengan fitur yang lebih lengkap, kamu bisa mengganti ke branch [`main`](https://github.com/irwanx/whatsapp-status-reader/tree/main).
+
 ```bash
 git clone https://github.com/irwanx/whatsapp-status-reader.git
-
 ```
+
+### 2. Persiapan Awal
+
 - **Masuk ke Direktori Repositori:**:
+
 ```bash
 cd whatsapp-status-reader
 ```
+
+(Opsional) Pindah ke branch `main` jika ingin fitur lebih lengkap
+
+```bash
+git checkout main
+```
+
 - **Instal Dependensi**:
+
 ```bash
 npm install
 # atau
 yarn install
 ```
-- **Jalankan**: dengan pairing code
+
+- **Konfigurasi Awal**
+
+Salin file contoh konfigurasi:
+
+```bash
+cp config/config.json.example config/config.json
+```
+
+Edit file `config.json` sesuai kebutuhan.
+
+### 3. Menjalankan Bot
+
+- **Mode Pairing Code**
+
 ```bash
 npm start
 # atau
 yarn start
 ```
-atau dengan qr
+
+- **Mode QR Code**
+
 ```bash
 npm qr
 # atau
@@ -75,7 +106,9 @@ yarn qr
 ```
 
 ## 🤝 Kontribusi
+
 Kontribusi sangat terbuka! Jika Anda ingin menambahkan fitur baru, memperbaiki bug, atau meningkatkan dokumentasi, silakan buat Pull Request atau buka Issue terlebih dahulu
 
 ## 📄Lisensi
+
 Proyek ini dilisensikan di bawah Lisensi MIT - lihat file [LISENSI](LICENSE) untuk detailnya.

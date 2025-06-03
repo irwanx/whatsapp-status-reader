@@ -1,5 +1,4 @@
 import { extractMessageContent } from "@whiskeysockets/baileys";
-import { config } from "../config.js";
 
 const unwrapMessage = (message) => {
   if (!message) return null;
@@ -64,7 +63,7 @@ const buildQuotedMessage = (context, quotedRaw, sock, originalJid) => {
   };
 };
 
-const parseCommand = (text) => {
+const parseCommand = (text, config) => {
   if (!text || !config.prefix.test(text))
     return { prefix: null, command: null, args: [] };
 
@@ -96,7 +95,7 @@ const getMediaDetails = (messageContent) => {
   };
 };
 
-export function formatMessage(msg, sock) {
+export async function formatMessage(msg, sock, config) {
   const jid = msg.key.remoteJid;
   const rawMessage = unwrapMessage(msg.message);
   const messageContent = rawMessage || {};
@@ -114,6 +113,8 @@ export function formatMessage(msg, sock) {
     }
   }
 
+  const { prefix, command, args } = parseCommand(text, config);
+
   const messageInfo = {
     key: msg.key,
     id: msg.key.id,
@@ -124,21 +125,21 @@ export function formatMessage(msg, sock) {
     name: msg.pushName || "",
     isGroup: jid.endsWith("@g.us"),
     isUser: jid.endsWith("@s.whatsapp.net"),
-    text,
     body: text,
+    text: prefix ? args.join(" ") : text,
     type: getMessageType(messageContent),
     timestamp: msg.messageTimestamp,
     raw: msg,
     media: messageContent,
-    isOwner: config.owner.includes((msg.key.participant || jid).split("@")[0]),
+    isOwner: msg.key.fromMe
+      ? true
+      : config.owner.includes((msg.key.participant || jid).split("@")[0]),
   };
 
   const context = messageContent?.extendedTextMessage?.contextInfo;
   const quoted = context
     ? buildQuotedMessage(context, context.quotedMessage, sock, jid)
     : null;
-
-  const { prefix, command, args } = parseCommand(text);
 
   const mediaDetails = getMediaDetails(messageContent);
 

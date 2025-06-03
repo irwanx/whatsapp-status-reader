@@ -1,200 +1,150 @@
-import { fileTypeStream } from "file-type";
-import Stream, { Readable } from "stream";
-import * as fs from "fs";
+import { fileTypeFromStream } from "file-type";
+import { createWriteStream, createReadStream } from "fs";
+import { unlink } from "fs/promises";
+import { pipeline } from "stream/promises";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import fetch from "node-fetch";
-
 import baileys from "@whiskeysockets/baileys";
-import { config } from "../config.js";
+
 const { jidNormalizedUser, downloadContentFromMessage, toReadable, toBuffer } =
   baileys;
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const config = (await import("../config/config.js")).config;
 
-function client({ sock }) {
-  const saveStreamToFile = (stream, file) =>
-    new Promise((resolve, reject) => {
-      const writable = stream.pipe(fs.createWriteStream(file));
-      writable.once("finish", () => {
-        resolve();
-        writable.destroy();
-      });
-      writable.once("error", () => {
-        reject();
-        writable.destroy();
-      });
-    });
-  const isReadableStream = (stream) => {
-    if (typeof Stream.isReadable === "function")
-      return Stream.isReadable(stream);
-    if (stream && stream[kIsReadable] != null) return stream[kIsReadable];
-    if (typeof stream?.readable !== "boolean") return null;
-    if (isDestroyed(stream)) return false;
-    return (
-      (isReadableNodeStream(stream) &&
-        !!stream.readable &&
-        !isReadableFinished(stream)) ||
-      stream instanceof fs.ReadStream ||
-      stream instanceof Readable
+class WhatsAppClient {
+  constructor(sock) {
+    this.sock = sock;
+  }
+
+  parseMention(text = "") {
+    return [...text.matchAll(/@(\d{5,16})/g)].map(
+      (match) => match[1] + "@s.whatsapp.net"
     );
-  };
+  }
 
-  const client = Object.defineProperties(sock, {
-    parseMention: {
-      value(text = "") {
-        return [...text.matchAll(/@([0-9]{5,16}|0)/g)].map(
-          (v) => v[1] + "@s.whatsapp.net"
-        );
+  getContentType(content) {
+    if (!content) return null;
+    return Object.keys(content).find(
+      (k) =>
+        (k === "conversation" ||
+          k.endsWith("Message") ||
+          k.endsWith("V2") ||
+          k.endsWith("V3")) &&
+        k !== "senderKeyDistributionMessage"
+    );
+  }
+
+  decodeJid(jid) {
+    return /:\d+@/.test(jid) ? jidNormalizedUser(jid) : jid;
+  }
+
+  async getFile(input, saveToFile = false) {
+    let data, filename, res;
+
+    switch (true) {
+      case Buffer.isBuffer(input):
+      case input instanceof ArrayBuffer:
+        data = toReadable(input);
+        break;
+      case typeof input === "string" && /^data:.*?;base64,/.test(input):
+        data = toReadable(Buffer.from(input.split(",")[1], "base64"));
+        break;
+      case typeof input === "string" && /^https?:\/\//.test(input):
+        res = await fetch(input);
+        data = res.body;
+        break;
+      case typeof input === "string":
+        filename = input;
+        data = createReadStream(input);
+        break;
+      case input instanceof Readable:
+        data = input;
+        break;
+      default:
+        throw new TypeError("Unsupported input type");
+    }
+
+    const typeResult = (await fileTypeFromStream(data)) || {
+      mime: "application/octet-stream",
+      ext: ".bin",
+    };
+
+    if (saveToFile && !filename) {
+      filename = join(__dirname, `../tmp/${Date.now()}${typeResult.ext}`);
+      await pipeline(data, createWriteStream(filename));
+      data = createReadStream(filename); // Reset stream
+    }
+
+    return {
+      ...typeResult,
+      data,
+      filename,
+      res,
+      toBuffer: async () => {
+        const chunks = [];
+        for await (const chunk of data) chunks.push(chunk);
+        return Buffer.concat(chunks);
       },
-      enumerable: true,
-      writable: true,
-    },
-    getContentType: {
-      value(content) {
-        if (content) {
-          const keys = Object.keys(content);
-          const key = keys.find(
-            (k) =>
-              (k === "conversation" ||
-                k.endsWith("Message") ||
-                k.endsWith("V2") ||
-                k.endsWith("V3")) &&
-              k !== "senderKeyDistributionMessage"
-          );
-          return key;
-        }
+      clear: async () => {
+        data.destroy?.();
+        if (filename) await unlink(filename).catch(() => {});
       },
-      enumerable: true,
-    },
-    decodeJid: {
-      value(jid) {
-        if (/:\d+@/gi.test(jid)) {
-          const decode = jidNormalizedUser(jid);
-          return decode;
-        } else return jid;
-      },
-    },
-    getFile: {
-      async value(PATH, saveToFile = false) {
-        let res, filename, data;
-        if (Buffer.isBuffer(PATH) || isReadableStream(PATH)) data = PATH;
-        else if (PATH instanceof ArrayBuffer) data = PATH.toBuffer();
-        else if (/^data:.*?\/.*?;base64,/i.test(PATH))
-          data = Buffer.from(PATH.split`,`[1], "base64");
-        else if (/^https?:\/\//.test(PATH)) {
-          res = await fetch(PATH);
-          data = res.body;
-        } else if (fs.existsSync(PATH)) {
-          filename = PATH;
-          data = fs.createReadStream(PATH);
-        } else data = Buffer.alloc(0);
+    };
+  }
 
-        let isStream = isReadableStream(data);
-        if (!isStream || Buffer.isBuffer(data)) {
-          if (!Buffer.isBuffer(data))
-            throw new TypeError(
-              "Converting buffer to stream, but data have type" + typeof data,
-              data
-            );
-          data = toReadable(data);
-          isStream = true;
-        }
+  async downloadMediaMessage(message) {
+    const mimeMap = {
+      imageMessage: "image",
+      videoMessage: "video",
+      stickerMessage: "sticker",
+      documentMessage: "document",
+      audioMessage: "audio",
+      ptvMessage: "video",
+    };
 
-        const streamWithType = (await fileTypeStream(data)) || {
-          ...data,
-          mime: "application/octet-stream",
-          ext: ".bin",
-        };
+    const msgContent = message.msg;
+    let mediaType = mimeMap[message.type];
 
-        if (data && saveToFile && !filename) {
-          filename = path.join(
-            __dirname,
-            `../tmp/${Date.now()}.${streamWithType.fileType.ext}`
-          );
-          await saveStreamToFile(data, filename);
-        }
-
-        return {
-          res,
-          filename,
-          ...streamWithType.fileType,
-          data: streamWithType,
-          async toBuffer() {
-            const buffers = [];
-            for await (const chunk of streamWithType) buffers.push(chunk);
-            return Buffer.concat(buffers);
-          },
-          async clear() {
-            streamWithType.destroy();
-            if (filename) await fs.promises.unlink(filename);
-          },
-        };
-      },
-      enumerable: true,
-    },
-    downloadMediaMessage: {
-      async value(message, filename) {
-        let mime = {
-          imageMessage: "image",
-          videoMessage: "video",
-          stickerMessage: "sticker",
-          documentMessage: "document",
-          audioMessage: "audio",
-          ptvMessage: "video",
-        }[message.type];
-
-        if ("thumbnailDirectPath" in message.msg && !("url" in message.msg)) {
-          message = {
-            directPath: message.msg.thumbnailDirectPath,
-            mediaKey: message.msg.mediaKey,
-          };
-          mime = "thumbnail-link";
-        } else {
-          message = message.msg;
-        }
-
-        return await toBuffer(await downloadContentFromMessage(message, mime));
-      },
-      enumerable: true,
-    },
-    reply: {
-      async value(jid, text = "", quoted, options) {
-        return sock.sendMessage(
-          jid,
+    if (msgContent?.thumbnailDirectPath && !msgContent.url) {
+      return toBuffer(
+        await downloadContentFromMessage(
           {
-            ...options,
-            text: text,
+            directPath: msgContent.thumbnailDirectPath,
+            mediaKey: msgContent.mediaKey,
           },
-          {
-            quoted,
-            ...options,
-            ephemeralExpiration: config.ephemeral,
-          }
-        );
+          "thumbnail-link"
+        )
+      );
+    }
+
+    return toBuffer(await downloadContentFromMessage(msgContent, mediaType));
+  }
+
+  async reply(jid, text = "", quoted, options = {}) {
+    return this.sock.sendMessage(
+      jid,
+      { text, ...options },
+      { quoted, ephemeralExpiration: config.ephemeral, ...options }
+    );
+  }
+
+  async sendMedia(jid, media, quoted, options = {}) {
+    const file = await this.getFile(media);
+    const buffer = await file.toBuffer();
+    const [mediaType] = file.mime.split("/");
+    const messageType = mediaType === "application" ? "document" : mediaType;
+
+    return this.sock.sendMessage(
+      jid,
+      {
+        [messageType]: buffer,
+        mimetype: file.mime,
+        ...options,
       },
-      writable: true,
-    },
-    sendMedia: {
-      async value(jid, path, quoted, options = {}) {
-        let { mime } = await sock.getFile(path).then((res) => res);
-        let data = await sock.getFile(path).then((res) => res.toBuffer());
-        let messageType = mime.split("/")[0];
-        let pase =
-          messageType.replace("application", "document") || messageType;
-        return await sock.sendMessage(
-          jid,
-          {
-            [`${pase}`]: data,
-            mimetype: mime,
-            ...options,
-          },
-          {
-            quoted,
-            ephemeralExpiration: config.ephemeral,
-          }
-        );
-      },
-      enumerable: true,
-    },
-  });
-  return client;
+      { quoted, ephemeralExpiration: config.ephemeral }
+    );
+  }
 }
 
-export default client;
+export default (sock) => new WhatsAppClient(sock);

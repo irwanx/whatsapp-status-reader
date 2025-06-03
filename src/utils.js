@@ -5,6 +5,7 @@ import readline from "readline";
 import { loadPlugins } from "./loadPlugins.js";
 import { formatMessage } from "./formatMessage.js";
 import logger from "./logger.js";
+import { readConfig } from "../services/configService.js";
 
 const plugins = await loadPlugins();
 
@@ -31,7 +32,8 @@ export function logUserInfo(sock) {
 export async function handleIncomingMessages(messages, sock) {
   for (const msg of messages) {
     try {
-      const m = formatMessage(msg, sock);
+      const config = await readConfig();
+      const m = await formatMessage(msg, sock, config);
 
       if (!m || m.isBaileys) continue;
 
@@ -41,16 +43,20 @@ export async function handleIncomingMessages(messages, sock) {
       logger({ m, type: "incoming" });
 
       if (m.prefix && m.command) {
-        for (const plugin of commandPlugins) {
-          try {
-            if (plugin.command.includes(m.command.toLowerCase())) {
-              await plugin.default({ m, sock });
+        const lowerCommand = m.command.toLowerCase();
+
+        if (config.publicMode ? m.isOwner ? true : false : true) {
+          for (const plugin of commandPlugins) {
+            try {
+              if (plugin.command.includes(lowerCommand)) {
+                await plugin.default({ m, sock, plugins, config });
+              }
+            } catch (err) {
+              console.error(
+                `❌ Command plugin error (${plugin.command.join(",")}):`,
+                err
+              );
             }
-          } catch (err) {
-            console.error(
-              `❌ Command plugin error (${plugin.command.join(",")}):`,
-              err
-            );
           }
         }
       }
@@ -58,7 +64,7 @@ export async function handleIncomingMessages(messages, sock) {
       if (!m.prefix || !m.command) {
         for (const plugin of nonCommandPlugins) {
           try {
-            await plugin.default({ m, sock });
+            await plugin.default({ m, sock, plugins, config });
           } catch (err) {
             console.error(`❌ Non-command plugin error (${plugin.name}):`, err);
           }

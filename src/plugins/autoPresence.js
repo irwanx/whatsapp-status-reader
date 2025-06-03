@@ -1,32 +1,20 @@
-import { config } from "../../config.js";
-
-export default async function autoPresence({ m, sock }) {
+export default async function autoPresence({ m, sock, config }) {
   try {
-    if (!m || !sock) return;
-
     if (!config.autoPresence) return;
-
-    if (!m.chat || typeof m.chat !== 'string') return;
-
     if (m.chat === "status@broadcast") return;
+    if (m.isGroup) return;
+    if (m.fromMe) return;
 
-    if (m.key?.fromMe) return;
+    const lastPresenceUpdate = sock.presenceUpdates?.[m.chat] || 0;
+    const now = Date.now();
 
-    const isGroupChat = m.chat.endsWith("@g.us");
-    const isPrivateChat = m.chat.endsWith("@s.whatsapp.net");
+    if (now - lastPresenceUpdate > 30000) {
+      await sock.sendPresenceUpdate(config.autoPresenceType, m.chat);
 
-    if (isPrivateChat || isGroupChat) {
-      const lastPresenceUpdate = sock.presenceUpdates?.[m.chat] || 0;
-      const now = Date.now();
-      
-      if (now - lastPresenceUpdate > 30000) {
-        await sock.sendPresenceUpdate(config.autoPresence, m.chat);
-        
-        if (!sock.presenceUpdates) sock.presenceUpdates = {};
-        sock.presenceUpdates[m.chat] = now;
-      }
+      if (!sock.presenceUpdates) sock.presenceUpdates = {};
+      sock.presenceUpdates[m.chat] = now;
     }
   } catch (error) {
-    console.error('Error in autoPresence:', error);
+    console.error("Error in autoPresence:", error);
   }
 }

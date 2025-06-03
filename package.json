@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-status-reader",
-  "version": "1.6.1",
+  "version": "1.6.4",
   "description": "Aplikasi untuk membaca status WhatsApp menggunakan library Baileys. Mudah digunakan dan terintegrasi dengan API WhatsApp.",
   "main": "index.js",
   "type": "module",
@@ -12,7 +12,9 @@
   },
   "directories": {
     "plugins": "src/plugins",
-    "src": "src"
+    "src": "src",
+    "services": "services",
+    "config": "config"
   },
   "repository": {
     "type": "git",
@@ -33,7 +35,7 @@
   "author": "Irwan X Yans",
   "license": "MIT",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.17",
