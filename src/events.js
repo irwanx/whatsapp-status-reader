@@ -127,9 +127,9 @@ class ConnectionHandler {
     process.exit(1);
   }
 
-  handleUnknownDisconnection() {
+  async handleUnknownDisconnection() {
     console.log(chalk.gray("Unknown disconnection reason."));
-    this.scheduleReconnection();
+    await this.safeRestart();
   }
 
   async safeRestart() {
