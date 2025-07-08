@@ -3,8 +3,8 @@ import Stream, { Readable } from "stream";
 import * as fs from "fs";
 import fetch from "node-fetch";
 
-import baileys from "@fizzxydev/baileys-pro";
-import { config } from "../config.js";
+import baileys from "@whiskeysockets/baileys";
+import { config } from "../config/config.js";
 const { jidNormalizedUser, downloadContentFromMessage, toReadable, toBuffer } =
   baileys;
 
