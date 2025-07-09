@@ -10,11 +10,6 @@ const DELAY_BETWEEN_SENDS = 3000;
 const MIN_COOLDOWN_MS = 60 * 1000;
 const COOLDOWN_MULTIPLIER = 1.5;
 
-/**
- * Memformat durasi dalam milidetik menjadi string yang mudah dibaca.
- * @param {number} ms Milidetik
- * @returns {string} String format waktu
- */
 const formatTime = (ms) => {
   if (ms < 0) ms = 0;
   const totalSeconds = Math.floor(ms / 1000);
@@ -29,12 +24,6 @@ const formatTime = (ms) => {
   return timeString.trim() || "0 detik";
 };
 
-/**
- * Mengambil metadata grup dengan mekanisme caching.
- * @param {object} sock Instance Baileys socket
- * @param {string} chatId ID grup
- * @returns {Promise<object>} Metadata grup
- */
 const getGroupMetadataWithCache = async (sock, chatId) => {
   sock.groupMetadataCache = sock.groupMetadataCache || {};
 
@@ -64,15 +53,20 @@ const getGroupMetadataWithCache = async (sock, chatId) => {
 };
 
 export default async function pushContact({ m, sock }) {
+  // Pengecekan owner hanya dilakukan sekali di awal
+  if (!m.isOwner) {
+    return m.reply("❌ Perintah ini hanya dapat digunakan oleh Owner Bot.");
+  }
+
+  if (!m.isGroup) {
+    return m.reply("❌ Perintah ini hanya dapat digunakan di dalam grup!");
+  }
+
   sock.pushContactState = sock.pushContactState || {
     activeGroups: {},
     cooldownUntil: {},
   };
   const pluginState = sock.pushContactState;
-
-  if (!m.isGroup) {
-    return m.reply("❌ Perintah ini hanya dapat digunakan di dalam grup!");
-  }
 
   const groupId = m.chat;
   const senderId = m.sender;
@@ -117,10 +111,6 @@ export default async function pushContact({ m, sock }) {
 
   try {
     const groupMetadata = await getGroupMetadataWithCache(sock, groupId);
-
-    if (!m.isOwner)
-      m.reply("❌ Perintah ini hanya dapat digunakan oleh Owner Bot.");
-
     const botJid = sock.user?.id?.replace(/:.*$/, "") + "@s.whatsapp.net";
 
     const recipients = groupMetadata.participants

@@ -8,12 +8,12 @@
   "prefix": "^[°•π÷×¶∆£¢€¥®™+✓_=|/~!?@#%^&.©^]",
   "ephemeral": 86400,
   "autoReadStory": true,
-  "autoReactStory": false,
+  "autoReactStory": true,
   "reactEmote": "😱😧😡😆😨😐🐊😭😪",
   "autoPresence": false,
   "firstChat": false,
   "autoPresenceType": "composing",
   "thumbnailUrl": "https://www.irwanx.my.id/static/android-chrome-512x512.png",
   "linkFakeUrl": "https://www.irwanx.my.id",
-  "public": true
+  "public": false
 }

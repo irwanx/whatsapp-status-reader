@@ -6,7 +6,6 @@ export const command = [
   "autopresence",
   "firstchat",
   "public",
-  "publik",
   "status",
 ];
 export const help = [
@@ -31,7 +30,6 @@ export default async function switchSetting({ m, config }) {
     autopresence: "autoPresence",
     firstchat: "firstChat",
     public: "publicMode",
-    publik: "publicMode",
   };
 
   if (cmd === "status") {

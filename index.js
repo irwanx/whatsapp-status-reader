@@ -76,6 +76,7 @@ export class WhatsAppConnector {
       },
       msgRetryCounterCache,
       generateHighQualityLinkPreview: true,
+      markOnlineOnConnect: false,
       patchMessageBeforeSending,
       getMessage,
     });
