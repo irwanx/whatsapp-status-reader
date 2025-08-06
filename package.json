@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-status-reader",
-  "version": "1.6.4",
+  "version": "1.6.5",
   "description": "Aplikasi untuk membaca status WhatsApp menggunakan library Baileys. Mudah digunakan dan terintegrasi dengan API WhatsApp.",
   "main": "index.js",
   "type": "module",
