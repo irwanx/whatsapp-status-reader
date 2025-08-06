@@ -2,6 +2,12 @@ import chalk from "chalk";
 import { jidNormalizedUser } from "@whiskeysockets/baileys";
 import { emojiStringToArray, mathRandom } from "../functions.js";
 
+const reactedStatus = new Set();
+
+function getStatusUniqueId(m) {
+  return `${m.key?.participant || m.participant}-${m.messageTimestamp}`;
+}
+
 export default async function autoReadAndReactStory({ m, sock, config }) {
   try {
     const isStatusBroadcast = m.chat === "status@broadcast";
@@ -17,6 +23,12 @@ export default async function autoReadAndReactStory({ m, sock, config }) {
     const normalizedUploader = jidNormalizedUser(uploaderJid);
     const botJid = jidNormalizedUser(sock.user.id);
 
+    if (normalizedUploader === botJid) return;
+
+    const uniqueId = getStatusUniqueId(m);
+    if (reactedStatus.has(uniqueId)) return;
+    reactedStatus.add(uniqueId);
+
     const senderName = m.name || m.pushName || "Tidak diketahui";
     const chatId = normalizedUploader.split("@")[0];
 
@@ -28,9 +40,11 @@ export default async function autoReadAndReactStory({ m, sock, config }) {
       isRead = true;
     }
 
-    if (isReactionEnabled && normalizedUploader !== botJid) {
+    if (isReactionEnabled) {
       const emojiList = emojiStringToArray(config.reactEmote);
       selectedEmoji = mathRandom(emojiList);
+
+      await new Promise((res) => setTimeout(res, Math.random() * 2000 + 1000));
 
       try {
         await sock.sendMessage(
@@ -46,7 +60,7 @@ export default async function autoReadAndReactStory({ m, sock, config }) {
           }
         );
       } catch (error) {
-        console.error("Error sending reaction:", error);
+        console.error("❌ Error sending reaction:", error);
       }
     }
 
@@ -57,6 +71,6 @@ export default async function autoReadAndReactStory({ m, sock, config }) {
 
     console.log(`${icon} ${chalk.cyan(senderName)} (${chalk.gray(chatId)}) ➜ ${statusMsg}`);
   } catch (error) {
-    console.error("Error in autoReadAndReactStory:", error);
+    console.error("❌ Error in autoReadAndReactStory:", error);
   }
 }

@@ -9,11 +9,11 @@
   "ephemeral": 86400,
   "autoReadStory": true,
   "autoReactStory": true,
-  "reactEmote": "😱😧😡😆😨😐🐊😭😪",
+  "reactEmote": "👍😪",
   "autoPresence": false,
   "firstChat": false,
   "autoPresenceType": "composing",
-  "thumbnailUrl": "https://www.irwanx.my.id/static/android-chrome-512x512.png",
-  "linkFakeUrl": "https://www.irwanx.my.id",
+  "thumbnailUrl": "https://irwanx.dobda.id/static/android-chrome-512x512.png",
+  "linkFakeUrl": "https://irwanx.dobda.id",
   "public": false
 }
