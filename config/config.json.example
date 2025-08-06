@@ -13,7 +13,5 @@
   "autoPresence": false,
   "firstChat": false,
   "autoPresenceType": "composing",
-  "thumbnailUrl": "https://irwanx.dobda.id/static/android-chrome-512x512.png",
-  "linkFakeUrl": "https://irwanx.dobda.id",
   "public": false
 }
