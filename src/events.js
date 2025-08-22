@@ -29,6 +29,7 @@ class ConnectionHandler {
           this.logVersionInfo();
           break;
         case "open":
+          this.sock.sendPresenceUpdate('unavailable');
           this.logUserInfo();
           break;
       }
