@@ -38,7 +38,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "npm:baileys-erlangga",
+    "@whiskeysockets/baileys": "latest",
     "axios": "^1.9.0",
     "chalk": "^5.3.0",
     "file-type": "^19.5.0",
