@@ -1,7 +1,7 @@
 # 📱 WhatsApp Status Reader
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E=18.0.0-brightgreen)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E=22.0.0-brightgreen)](https://nodejs.org/)
 [![Baileys](https://img.shields.io/badge/Powered_by-Baileys-blue)](https://github.com/WhiskeySockets/Baileys)
 [![Author](https://img.shields.io/badge/Author-irwanx-blue)](https://github.com/irwanx)
 
@@ -28,11 +28,8 @@ Solusi ini cocok bagi Anda yang ingin:
 - ⚙️ **Integrasi dengan Baileys**  
   Memanfaatkan pustaka [Baileys](https://github.com/WhiskeySockets/Baileys) untuk koneksi yang stabil dan handal dengan WhatsApp Web.
 
-- 🧩 **Sistem Plugin Modular**  
-  Dukungan sistem plugin agar bot dapat dikembangkan sesuai kebutuhan.
-
-- 🟢 **Mudah Digunakan & Dikembangkan**  
-  Dirancang agar developer dapat langsung menjalankan dan mengembangkan sesuai kasus penggunaan.
+- 🟢 **Mudah Digunakan & Ringan**  
+  Dirancang agar developer dapat langsung menjalankan bot sesuai kasus penggunaan.
 
 ---
 
@@ -72,13 +69,17 @@ yarn install
 
 - **Konfigurasi Awal**
 
-Salin file contoh konfigurasi:
+Ubah Pengaturan bot di `config.js`
 
-```bash
-cp config/config.json.example config/config.json
+```javascript
+export const config = {
+  autoReadStory: true,
+  autoReactStory: true,
+  reactEmote: "✨",
+}
 ```
 
-Edit file `config.json` sesuai kebutuhan.
+Edit file `config.js` sesuai kebutuhan.
 
 ### 3. Menjalankan Bot
 

@@ -8,11 +8,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = __dirname;
 
-const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf8"));
+const pkg = JSON.parse(
+  fs.readFileSync(path.join(projectRoot, "package.json"), "utf8"),
+);
 
 const allowedFolders = [
   projectRoot,
-  ...Object.values(pkg.directories || {}).map((f) => path.join(projectRoot, f))
+  ...Object.values(pkg.directories || {}).map((f) => path.join(projectRoot, f)),
 ];
 
 function getAllJsFiles(dirPath) {
@@ -30,7 +32,8 @@ function getAllJsFiles(dirPath) {
         entry.name === "sessions" ||
         entry.name === "auth" ||
         entry.name === "logs"
-      ) continue;
+      )
+        continue;
 
       jsFiles = jsFiles.concat(getAllJsFiles(fullPath));
     } else if (entry.isFile() && entry.name.endsWith(".js")) {
