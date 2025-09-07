@@ -4,6 +4,7 @@ export const command = [
   "autoreadsw",
   "autoreactsw",
   "autopresence",
+  "firstchat",
   "public",
   "status",
 ];
@@ -11,6 +12,7 @@ export const help = [
   "autoreadsw on/off",
   "autoreactsw on/off",
   "autopresence on/off",
+  "firstchat on/off",
   "public on/off",
   "status",
 ];
@@ -26,6 +28,7 @@ export default async function switchSetting({ m, config }) {
     autoreadsw: "autoReadStory",
     autoreactsw: "autoReactStory",
     autopresence: "autoPresence",
+    firstchat: "firstChat",
     public: "publicMode",
   };
 

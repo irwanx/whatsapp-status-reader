@@ -7,7 +7,7 @@ const LOG_ICONS = {
   error: "[ERROR]",
 };
 
-let LOGS = false
+let LOGS = true
 
 export default async function logger({ m, type = "incoming" }) {
   try {

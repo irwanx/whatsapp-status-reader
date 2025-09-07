@@ -67,7 +67,7 @@ class ConnectionHandler {
   handleBadSession() {
     console.log(
       chalk.red.bold("❌ Bad Session File!") +
-        chalk.yellow(" Hapus session dan scan ulang.")
+      chalk.yellow(" Hapus session dan scan ulang.")
     );
     process.exit(1);
   }
@@ -75,7 +75,7 @@ class ConnectionHandler {
   handleConnectionClosed() {
     console.log(
       chalk.yellow("🔌 Connection closed!") +
-        chalk.cyan(" Menyambungkan kembali...")
+      chalk.cyan(" Menyambungkan kembali...")
     );
     this.scheduleReconnection();
   }
@@ -83,7 +83,7 @@ class ConnectionHandler {
   handleConnectionLost() {
     console.log(
       chalk.red("⚡ Connection Lost from Server!") +
-        chalk.cyan(" Menyambungkan kembali...")
+      chalk.cyan(" Menyambungkan kembali...")
     );
     this.scheduleReconnection();
   }
@@ -91,7 +91,7 @@ class ConnectionHandler {
   handleConnectionReplaced() {
     console.log(
       chalk.magenta("🔄 Connection Replaced!") +
-        chalk.cyan(" Sesi baru lainnya dibuka dan terhubung kembali...")
+      chalk.cyan(" Sesi baru lainnya dibuka dan terhubung kembali...")
     );
     this.scheduleReconnection();
   }
@@ -99,15 +99,17 @@ class ConnectionHandler {
   async handleLoggedOut() {
     console.log(
       chalk.red.bold("🚪 Device Logged Out!") +
-        chalk.yellow(" Menghapus session dan scan ulang.")
+      chalk.yellow(" Mencoba untuk menyambung kembali...")
     );
-    await this.deleteAuthDirectory();
+    // await this.deleteAuthDirectory(); 
+
+    this.scheduleReconnection();
   }
 
   async handleRestartRequired() {
     console.log(
       chalk.blue("🔁 Restart Required!") +
-        chalk.cyan(" Memulai ulang dengan aman...")
+      chalk.cyan(" Memulai ulang dengan aman...")
     );
     await this.safeRestart();
   }
@@ -115,7 +117,7 @@ class ConnectionHandler {
   handleTimedOut() {
     console.log(
       chalk.red("⏲️ Connection Timed Out!") +
-        chalk.cyan(" Menyambungkan kembali...")
+      chalk.cyan(" Menyambungkan kembali...")
     );
     this.scheduleReconnection();
   }
@@ -123,14 +125,14 @@ class ConnectionHandler {
   handleMultideviceMismatch() {
     console.log(
       chalk.red.bold("💥 Multi-device mismatch!") +
-        chalk.yellow(" Scan ulang lagi.")
+      chalk.yellow(" Scan ulang lagi.")
     );
     process.exit(1);
   }
 
   async handleUnknownDisconnection() {
     console.log(chalk.gray("Unknown disconnection reason."));
-    await this.safeRestart();
+    this.scheduleReconnection();
   }
 
   async safeRestart() {

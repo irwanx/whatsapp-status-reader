@@ -49,7 +49,7 @@ Pastikan Anda telah menginstal:
 
 ### 1. Klon Repositori (default branch `master`)
 
-Jika kamu ingin membuat bot dengan fitur yang lebih lengkap, kamu bisa mengganti ke branch [`main`](https://github.com/irwanx/whatsapp-status-reader/tree/main).
+Jika kamu ingin membuat bot dengan fitur yang lebih lengkap, kamu bisa mengganti ke branch [`full`](https://github.com/irwanx/whatsapp-status-reader/tree/full).
 
 ```bash
 git clone https://github.com/irwanx/whatsapp-status-reader.git
@@ -63,10 +63,10 @@ git clone https://github.com/irwanx/whatsapp-status-reader.git
 cd whatsapp-status-reader
 ```
 
-(Opsional) Pindah ke branch `main` jika ingin fitur lebih lengkap
+(Opsional) Pindah ke branch `full` jika ingin fitur lebih lengkap
 
 ```bash
-git checkout main
+git checkout full
 ```
 
 - **Instal Dependensi**:
