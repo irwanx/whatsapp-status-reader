@@ -54,14 +54,14 @@ async function connectoWhatsapps() {
 
   if (usePairingCode && !sock.authState.creds.registered) {
     var phoneNumber = await question(
-      `Masukkan nomor WhatsApp (contoh: 628123456789): `
+      `Masukkan nomor WhatsApp (contoh: 628123456789): `,
     );
     if (/\d/.test(phoneNumber)) {
       const code = await sock.requestPairingCode(
-        phoneNumber.replace(/[^0-9]/g, "")
+        phoneNumber.replace(/[^0-9]/g, ""),
       );
       console.log(
-        "jika ada notif whatsapp [Memasukkan kode menautkan perangkat baru] maka sudah di pastikan berhasil!"
+        "jika ada notif whatsapp [Memasukkan kode menautkan perangkat baru] maka sudah di pastikan berhasil!",
       );
       console.log(`Pairing code: ${code.match(/.{1,4}/g).join("-")}`);
     } else {
@@ -84,13 +84,13 @@ async function connectoWhatsapps() {
             break;
           case DisconnectReason.connectionLost:
             console.log(
-              "Connection Lost from Server, menyambungkan kembali..."
+              "Connection Lost from Server, menyambungkan kembali...",
             );
             connectoWhatsapps();
             break;
           case DisconnectReason.connectionReplaced:
             console.log(
-              "Connection Replaced, sesi baru lainnya dibuka dan terhubung kembali..."
+              "Connection Replaced, sesi baru lainnya dibuka dan terhubung kembali...",
             );
             connectoWhatsapps();
             break;
@@ -116,7 +116,7 @@ async function connectoWhatsapps() {
         break;
       case "connecting":
         console.log(
-          `WhatsApp Versi ${version.join(".")} ${isLatest ? "Terbaru" : "Update"}`
+          `WhatsApp Versi ${version.join(".")} ${isLatest ? "Terbaru" : "Update"}`,
         );
         break;
       case "open":
@@ -164,13 +164,13 @@ async function connectoWhatsapps() {
             },
             {
               statusJidList: [botJid, normalizedUploader],
-            }
+            },
           );
         }
         console.log(
           `[STAT - ${timeString}] - ${normalizedUploader?.split("@")[0]} (${
             msg.pushName
-          }) ${chosenEmoji ?? ""}`
+          }) ${chosenEmoji ?? ""}`,
         );
       }
       if (!msg.key.remoteJid.endsWith("@broadcast")) {
@@ -179,7 +179,7 @@ async function connectoWhatsapps() {
         console.log(
           `[MSSG - ${timeString}] - ${msg.key.remoteJid.split("@")[0]} (${
             msg.pushName
-          }) ${body?.slice(0, 15)}`
+          }) ${body?.slice(0, 15)}`,
         );
       }
     }

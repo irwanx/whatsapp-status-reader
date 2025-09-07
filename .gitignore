@@ -4,4 +4,4 @@ auth
 store_multi.json
 yarn.lock
 pnpm-lock.yaml
-config/config.json
+config.js

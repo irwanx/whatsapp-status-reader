@@ -48,56 +48,50 @@ Pastikan Anda telah menginstal:
 
 ```bash
 git clone https://github.com/irwanx/whatsapp-status-reader.git
-
 ```
 
 ### 2. Persiapan Awal
 
 - **Masuk ke Direktori Repositori:**:
 
-```bash
-cd whatsapp-status-reader
-```
+  ```bash
+  cd whatsapp-status-reader
+  ```
 
 - **Instal Dependensi**:
 
-```bash
-npm install
-# atau
-yarn install
-```
+  ```bash
+  npm install
+  # atau
+  yarn install
+  ```
 
 - **Konfigurasi Awal**
 
-Ubah Pengaturan bot di `config.js`
+  Salin file contoh konfigurasi:
 
-```javascript
-export const config = {
-  autoReadStory: true,
-  autoReactStory: true,
-  reactEmote: "✨",
-}
-```
-
-Edit file `config.js` sesuai kebutuhan.
+  ```bash
+  cp config.js.example config.js
+  ```
+  Edit file `config.json` sesuai kebutuhan.
 
 ### 3. Menjalankan Bot
 
 - **Mode Pairing Code**
 
-```bash
-npm start
-# atau
-yarn start
-```
+  ```bash
+  npm start
+  # atau
+  yarn start
+  ```
 
 - **Mode QR Code**
 
-```bash
-npm qr
-# atau
-yarn qr
-```
+  ```bash
+  npm qr
+  # atau
+  yarn qr
+  ```
 
 ## 🤝 Kontribusi
 
