@@ -73,6 +73,7 @@ git clone https://github.com/irwanx/whatsapp-status-reader.git
   ```bash
   cp config.js.example config.js
   ```
+
   Edit file `config.json` sesuai kebutuhan.
 
 ### 3. Menjalankan Bot
