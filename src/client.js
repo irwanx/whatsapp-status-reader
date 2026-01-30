@@ -4,7 +4,7 @@ import * as fs from "fs";
 import fetch from "node-fetch";
 
 import baileys from "@whiskeysockets/baileys";
-import { config } from "../config/config.js";
+import { config } from "./config.js";
 const { jidNormalizedUser, downloadContentFromMessage, toReadable, toBuffer } =
   baileys;
 
@@ -40,7 +40,7 @@ export default function client(sock) {
     parseMention: {
       value(text = "") {
         return [...text.matchAll(/@([0-9]{5,16}|0)/g)].map(
-          (v) => v[1] + "@s.whatsapp.net"
+          (v) => v[1] + "@s.whatsapp.net",
         );
       },
       enumerable: true,
@@ -56,7 +56,7 @@ export default function client(sock) {
                 k.endsWith("Message") ||
                 k.endsWith("V2") ||
                 k.endsWith("V3")) &&
-              k !== "senderKeyDistributionMessage"
+              k !== "senderKeyDistributionMessage",
           );
           return key;
         }
@@ -65,10 +65,12 @@ export default function client(sock) {
     },
     decodeJid: {
       value(jid) {
-        if (/:\d+@/gi.test(jid)) {
-          const decode = jidNormalizedUser(jid);
-          return decode;
-        } else return jid;
+        if (!jid) return jid;
+        try {
+          return jidNormalizedUser(jid);
+        } catch {
+          return jid;
+        }
       },
     },
     getFile: {
@@ -91,7 +93,7 @@ export default function client(sock) {
           if (!Buffer.isBuffer(data))
             throw new TypeError(
               "Converting buffer to stream, but data have type" + typeof data,
-              data
+              data,
             );
           data = toReadable(data);
           isStream = true;
@@ -106,7 +108,7 @@ export default function client(sock) {
         if (data && saveToFile && !filename) {
           filename = path.join(
             __dirname,
-            `../tmp/${Date.now()}.${streamWithType.fileType.ext}`
+            `../tmp/${Date.now()}.${streamWithType.fileType.ext}`,
           );
           await saveStreamToFile(data, filename);
         }
@@ -156,6 +158,9 @@ export default function client(sock) {
     },
     reply: {
       async value(jid, text = "", quoted, options) {
+        if (quoted && quoted.raw) {
+          quoted = quoted.raw;
+        }
         return sock.sendMessage(
           jid,
           {
@@ -166,7 +171,7 @@ export default function client(sock) {
             quoted,
             ...options,
             ephemeralExpiration: config.ephemeral,
-          }
+          },
         );
       },
       writable: true,
@@ -187,7 +192,7 @@ export default function client(sock) {
           },
           {
             quoted,
-          }
+          },
         );
       },
       enumerable: true,

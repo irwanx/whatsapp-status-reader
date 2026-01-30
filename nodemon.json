@@ -1,6 +1,12 @@
 {
   "watch": ["src/plugins", "src", "services", "config", "index.js"],
-  "ignore": ["auth", "session", "node_modules", "config/config.json"],
+  "ignore": [
+    "auth",
+    "session",
+    "node_modules",
+    "config/config.json",
+    "database/database.json"
+  ],
   "ext": "js,json",
   "exec": "node index.js"
 }

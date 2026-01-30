@@ -47,12 +47,10 @@ Pastikan Anda telah menginstal:
 
 ## 🛠️ Cara Menggunakan
 
-### 1. Klon Repositori (default branch `master`)
-
-Jika kamu ingin membuat bot dengan fitur yang lebih lengkap, kamu bisa mengganti ke branch [`full`](https://github.com/irwanx/whatsapp-status-reader/tree/full).
+### 1. Klon Repositori branch `full`
 
 ```bash
-git clone https://github.com/irwanx/whatsapp-status-reader.git
+git clone https://github.com/irwanx/whatsapp-status-reader.git --branch full wsr
 ```
 
 ### 2. Persiapan Awal
@@ -60,13 +58,7 @@ git clone https://github.com/irwanx/whatsapp-status-reader.git
 - **Masuk ke Direktori Repositori:**:
 
 ```bash
-cd whatsapp-status-reader
-```
-
-(Opsional) Pindah ke branch `full` jika ingin fitur lebih lengkap
-
-```bash
-git checkout full
+cd wsr
 ```
 
 - **Instal Dependensi**:
@@ -75,6 +67,8 @@ git checkout full
 npm install
 # atau
 yarn install
+# atau
+pnpm install
 ```
 
 - **Konfigurasi Awal**
@@ -82,10 +76,10 @@ yarn install
 Salin file contoh konfigurasi:
 
 ```bash
-cp config/config.json.example config/config.json
+cp .env.example .env
 ```
 
-Edit file `config.json` sesuai kebutuhan.
+Edit file `.env` sesuai kebutuhan.
 
 ### 3. Menjalankan Bot
 
@@ -95,6 +89,8 @@ Edit file `config.json` sesuai kebutuhan.
 npm start
 # atau
 yarn start
+# atau
+pnpm start
 ```
 
 - **Mode QR Code**
@@ -103,6 +99,8 @@ yarn start
 npm qr
 # atau
 yarn qr
+# atau
+pnpm qr
 ```
 
 ## 🤝 Kontribusi

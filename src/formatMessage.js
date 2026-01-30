@@ -38,6 +38,7 @@ const buildQuotedMessage = (context, quotedRaw, sock, originalJid) => {
     id: context?.stanzaId,
     chat: context?.remoteJid,
     sender: context?.participant || context?.remoteJid,
+    fromMe: (context?.participant || context?.remoteJid) === sock.decodeJid(sock.user.id),
     text: quotedText,
     type: quotedType,
     raw: extractMessageContent(quotedMsg),
@@ -46,14 +47,14 @@ const buildQuotedMessage = (context, quotedRaw, sock, originalJid) => {
       await sock.sendMessage(
         originalJid,
         { text },
-        { quoted: { key: context, message: quotedRaw }, ...options }
+        { quoted: { key: context, message: quotedRaw }, ...options },
       );
     },
     download: async (filepath) => {
       try {
         return await sock.downloadMediaMessage(
           { key: context, message: quotedRaw },
-          filepath
+          filepath,
         );
       } catch (err) {
         console.error("Error downloading quoted media:", err);
@@ -115,11 +116,36 @@ export async function formatMessage(msg, sock, config) {
 
   const { prefix, command, args } = parseCommand(text, config);
 
+  let chatJid = jid;
+  let senderJid = msg.key.participant || jid;
+
+  // Use remoteJidAlt if available (often present in LID messages)
+  if (msg.key.remoteJidAlt) {
+    chatJid = msg.key.remoteJidAlt;
+  }
+
+  if (msg.key.participantAlt) {
+    senderJid = msg.key.participantAlt;
+  } else if (!msg.key.participant && msg.key.remoteJidAlt) {
+    senderJid = msg.key.remoteJidAlt;
+  }
+
+  if (sock.store) {
+    if (chatJid?.includes("@lid")) {
+      const contact = sock.store.contacts[chatJid];
+      if (contact && contact.id) chatJid = contact.id;
+    }
+    if (senderJid?.includes("@lid")) {
+      const contact = sock.store.contacts[senderJid];
+      if (contact && contact.id) senderJid = contact.id;
+    }
+  }
+
   const messageInfo = {
     key: msg.key,
     id: msg.key.id,
-    chat: jid,
-    sender: msg.key.participant || jid,
+    chat: sock.decodeJid(chatJid),
+    sender: sock.decodeJid(senderJid),
     fromMe: msg.key.fromMe || jid === sock.user?.id,
     isBaileys: msg.key.id.startsWith("3EB0") || false,
     name: msg.pushName || "",
@@ -133,8 +159,65 @@ export async function formatMessage(msg, sock, config) {
     media: messageContent,
     isOwner: msg.key.fromMe
       ? true
-      : config.owner.includes((msg.key.participant || jid).split("@")[0]),
+      : (() => {
+          const senderNumber = (sock.decodeJid(senderJid) || "").split("@")[0];
+          const ownerNumbers = Array.isArray(config.owner)
+            ? config.owner
+            : [config.owner];
+          return ownerNumbers.some((owner) => {
+            const ownerNumber = String(owner).replace(/[^0-9]/g, "");
+            return senderNumber === ownerNumber;
+          });
+        })(),
   };
+
+  // Admin Check Logic
+  if (messageInfo.isGroup) {
+    try {
+      const groupMetadata = await sock.groupMetadata(jid);
+      const participants = groupMetadata.participants;
+
+      const normalizeJid = (jid) => {
+        if (!jid) return null;
+        const [user, domain] = jid.split("@");
+        return user.split(":")[0] + "@" + domain;
+      };
+
+      const senderJidRaw = sock.decodeJid(senderJid);
+      const senderJidNorm = normalizeJid(senderJidRaw);
+
+      const botJidRaw = sock.user.id;
+      const botJidNorm = normalizeJid(botJidRaw);
+      const botLidNorm = sock.user.lid ? normalizeJid(sock.user.lid) : null;
+
+      const senderParticipant = participants.find((p) => {
+        const pIdNorm = normalizeJid(p.id);
+        return pIdNorm === senderJidNorm;
+      });
+
+      const botParticipant = participants.find((p) => {
+        const pIdNorm = normalizeJid(p.id);
+        return pIdNorm === botJidNorm || (botLidNorm && pIdNorm === botLidNorm);
+      });
+
+      messageInfo.isAdmin =
+        (senderParticipant &&
+          (senderParticipant.admin === "admin" ||
+            senderParticipant.admin === "superadmin")) ||
+        messageInfo.isOwner;
+      messageInfo.isBotAdmin =
+        botParticipant &&
+        (botParticipant.admin === "admin" ||
+          botParticipant.admin === "superadmin");
+    } catch (err) {
+      // Ignore 403 Forbidden errors (bot left group or not participant)
+      if (err.output?.statusCode !== 403 && err.message !== "forbidden") {
+        console.error("Error fetching group metadata in formatMessage:", err);
+      }
+      messageInfo.isAdmin = false;
+      messageInfo.isBotAdmin = false;
+    }
+  }
 
   const context = messageContent?.extendedTextMessage?.contextInfo;
   const quoted = context
@@ -149,6 +232,8 @@ export async function formatMessage(msg, sock, config) {
     prefix,
     command,
     args,
+    isAdmin: messageInfo.isAdmin,
+    isBotAdmin: messageInfo.isBotAdmin,
     ...mediaDetails,
     mentionedJid,
     reply: async (text, options = {}) => {
@@ -172,7 +257,7 @@ export async function formatMessage(msg, sock, config) {
             quoted: msg,
             ephemeralExpiration: config.ephemeral,
             ...options,
-          }
+          },
         );
       } catch (error) {
         console.error("Error replying to message:", error);
@@ -182,7 +267,7 @@ export async function formatMessage(msg, sock, config) {
       try {
         return await sock.downloadMediaMessage(
           { message: msg.message },
-          filepath
+          filepath,
         );
       } catch (err) {
         console.error("Error downloading media:", err);

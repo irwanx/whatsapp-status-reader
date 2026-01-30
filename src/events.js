@@ -1,8 +1,9 @@
 import { Boom } from "@hapi/boom";
 import { DisconnectReason } from "@whiskeysockets/baileys";
 import chalk from "chalk";
-import fs from "fs/promises";
 import { handleIncomingMessages } from "./utils.js";
+import { handleGroupParticipantsUpdate, handleCall } from "./handler.js";
+import { config } from "./config.js";
 
 const AUTH_DIR_PATH = "../auth";
 
@@ -17,6 +18,8 @@ class ConnectionHandler {
   initialize() {
     this.setupConnectionUpdateListener();
     this.setupMessageUpsertListener();
+    this.setupGroupParticipantsUpdateListener();
+    this.setupCallListener();
   }
 
   setupConnectionUpdateListener() {
@@ -29,7 +32,7 @@ class ConnectionHandler {
           this.logVersionInfo();
           break;
         case "open":
-          this.sock.sendPresenceUpdate('unavailable');
+          this.sock.sendPresenceUpdate("unavailable");
           this.logUserInfo();
           break;
       }
@@ -39,6 +42,18 @@ class ConnectionHandler {
   setupMessageUpsertListener() {
     this.sock.ev.on("messages.upsert", ({ messages, type }) => {
       handleIncomingMessages(messages, this.sock, type);
+    });
+  }
+
+  setupGroupParticipantsUpdateListener() {
+    this.sock.ev.on("group-participants.update", async (data) => {
+      await handleGroupParticipantsUpdate(this.sock, data);
+    });
+  }
+
+  setupCallListener() {
+    this.sock.ev.on("call", async (data) => {
+      await handleCall(this.sock, data);
     });
   }
 
@@ -67,7 +82,7 @@ class ConnectionHandler {
   handleBadSession() {
     console.log(
       chalk.red.bold("❌ Bad Session File!") +
-      chalk.yellow(" Hapus session dan scan ulang.")
+        chalk.yellow(" Hapus session dan scan ulang."),
     );
     process.exit(1);
   }
@@ -75,7 +90,7 @@ class ConnectionHandler {
   handleConnectionClosed() {
     console.log(
       chalk.yellow("🔌 Connection closed!") +
-      chalk.cyan(" Menyambungkan kembali...")
+        chalk.cyan(" Menyambungkan kembali..."),
     );
     this.scheduleReconnection();
   }
@@ -83,7 +98,7 @@ class ConnectionHandler {
   handleConnectionLost() {
     console.log(
       chalk.red("⚡ Connection Lost from Server!") +
-      chalk.cyan(" Menyambungkan kembali...")
+        chalk.cyan(" Menyambungkan kembali..."),
     );
     this.scheduleReconnection();
   }
@@ -91,7 +106,7 @@ class ConnectionHandler {
   handleConnectionReplaced() {
     console.log(
       chalk.magenta("🔄 Connection Replaced!") +
-      chalk.cyan(" Sesi baru lainnya dibuka dan terhubung kembali...")
+        chalk.cyan(" Sesi baru lainnya dibuka dan terhubung kembali..."),
     );
     this.scheduleReconnection();
   }
@@ -99,9 +114,9 @@ class ConnectionHandler {
   async handleLoggedOut() {
     console.log(
       chalk.red.bold("🚪 Device Logged Out!") +
-      chalk.yellow(" Mencoba untuk menyambung kembali...")
+        chalk.yellow(" Mencoba untuk menyambung kembali..."),
     );
-    // await this.deleteAuthDirectory(); 
+    // await this.deleteAuthDirectory();
 
     this.scheduleReconnection();
   }
@@ -109,7 +124,7 @@ class ConnectionHandler {
   async handleRestartRequired() {
     console.log(
       chalk.blue("🔁 Restart Required!") +
-      chalk.cyan(" Memulai ulang dengan aman...")
+        chalk.cyan(" Memulai ulang dengan aman..."),
     );
     await this.safeRestart();
   }
@@ -117,7 +132,7 @@ class ConnectionHandler {
   handleTimedOut() {
     console.log(
       chalk.red("⏲️ Connection Timed Out!") +
-      chalk.cyan(" Menyambungkan kembali...")
+        chalk.cyan(" Menyambungkan kembali..."),
     );
     this.scheduleReconnection();
   }
@@ -125,7 +140,7 @@ class ConnectionHandler {
   handleMultideviceMismatch() {
     console.log(
       chalk.red.bold("💥 Multi-device mismatch!") +
-      chalk.yellow(" Scan ulang lagi.")
+        chalk.yellow(" Scan ulang lagi."),
     );
     process.exit(1);
   }
@@ -163,7 +178,7 @@ class ConnectionHandler {
   logVersionInfo() {
     console.log(
       chalk.green(`Versi saat ini: ${this.version}`),
-      this.isLatest ? chalk.blue("(Terbaru)") : chalk.yellow("(Perlu update)")
+      this.isLatest ? chalk.blue("(Terbaru)") : chalk.yellow("(Perlu update)"),
     );
   }
 
@@ -171,7 +186,7 @@ class ConnectionHandler {
     if (this.sock.user) {
       console.log(
         chalk.green("✅ Terhubung sebagai:"),
-        chalk.cyan(this.sock.user.name || this.sock.user.id)
+        chalk.cyan(this.sock.user.name || this.sock.user.id),
       );
     } else {
       console.log(chalk.yellow("⚠️ Terhubung, tapi user info belum tersedia."));

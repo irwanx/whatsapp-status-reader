@@ -2,54 +2,25 @@ import baileys from "@whiskeysockets/baileys";
 const { proto } = baileys;
 import chalk from "chalk";
 import readline from "readline";
-import { loadPlugins } from "./loadPlugins.js";
+import { config } from "./config.js";
+import { handleCommand, handleStory } from "./handler.js";
 import { formatMessage } from "./formatMessage.js";
 import logger from "./logger.js";
-import { readConfig } from "../services/configService.js";
-
-const plugins = await loadPlugins();
 
 export async function handleIncomingMessages(messages, sock) {
   for (const msg of messages) {
     try {
-      const config = await readConfig();
       const m = await formatMessage(msg, sock, config);
 
       if (!m || m.isBaileys) continue;
 
-      const commandPlugins = plugins.filter((p) => p.command);
-      const nonCommandPlugins = plugins.filter((p) => !p.command);
+      // Run auto read/react status
+      await handleStory(sock, m);
 
       logger({ m, type: "incoming" });
 
-      if (m.prefix && m.command) {
-        const lowerCommand = m.command.toLowerCase();
-
-        if (config.publicMode ? m.isOwner ? true : false : true) {
-          for (const plugin of commandPlugins) {
-            try {
-              if (plugin.command.includes(lowerCommand)) {
-                await plugin.default({ m, sock, plugins, config });
-              }
-            } catch (err) {
-              console.error(
-                `❌ Command plugin error (${plugin.command.join(",")}):`,
-                err
-              );
-            }
-          }
-        }
-      }
-
-      if (!m.prefix || !m.command) {
-        for (const plugin of nonCommandPlugins) {
-          try {
-            await plugin.default({ m, sock, plugins, config });
-          } catch (err) {
-            console.error(`❌ Non-command plugin error (${plugin.name}):`, err);
-          }
-        }
-      }
+      await handleCommand(m, sock);
+      // }
     } catch (err) {
       console.error("❌ Message processing error:", err);
     }
@@ -69,7 +40,7 @@ export function logVersionInfo(version, isLatest) {
 export function logUserInfo(sock) {
   const userName = chalk.bold.cyanBright(`\n👤 Nama : ${sock.user.name}`);
   const userNumber = chalk.bold.yellow(
-    `📞 Nomor : ${sock.user.id.split(":")[0]}\n`
+    `📞 Nomor : ${sock.user.id.split(":")[0]}\n`,
   );
 
   console.log(userName);
@@ -102,7 +73,7 @@ export const handlePairingCode = async (sock, gunakanPairingCode) => {
     let nomorWhatsApp;
     while (true) {
       nomorWhatsApp = await tanya(
-        chalk.blue("Masukkan nomor WhatsApp (contoh: 628123456789): ")
+        chalk.blue("Masukkan nomor WhatsApp (contoh: 628123456789): "),
       );
       if (validasiNomor(nomorWhatsApp)) break;
       console.log(chalk.red("Nomor tidak valid. Harap masukkan 10-15 digit."));
@@ -120,17 +91,17 @@ export const handlePairingCode = async (sock, gunakanPairingCode) => {
     console.log(chalk.cyan("------------------------------"));
     console.log(
       chalk.yellow("Kode Pairing Anda:"),
-      chalk.bold.whiteBright(formatKodePairing(kode))
+      chalk.bold.whiteBright(formatKodePairing(kode)),
     );
     console.log(chalk.cyan("------------------------------"));
   } catch (error) {
     console.error(
       chalk.red("\n❌ Gagal mendapatkan kode pairing:"),
-      error.message
+      error.message,
     );
     if (error.message.includes("registered")) {
       console.log(
-        chalk.yellow("Nomor ini mungkin sudah terdaftar di perangkat lain.")
+        chalk.yellow("Nomor ini mungkin sudah terdaftar di perangkat lain."),
       );
     }
   } finally {
