@@ -1,0 +1,55 @@
+{
+  "name": "whatsapp-status-reader",
+  "version": "1.7.5",
+  "description": "Aplikasi untuk membaca status WhatsApp menggunakan library Baileys. Mudah digunakan dan terintegrasi dengan API WhatsApp.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js --pairing-code",
+    "qr": "node index.js",
+    "dev": "nodemon index.js --pairing-code",
+    "test": "node test.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "directories": {
+    "plugins": "src/plugins",
+    "src": "src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/irwanx/whatsapp-status-reader.git"
+  },
+  "homepage": "https://github.com/irwanx/whatsapp-status-reader",
+  "bugs": {
+    "url": "https://github.com/irwanx/whatsapp-status-reader/issues"
+  },
+  "keywords": [
+    "whatsapp",
+    "whiskeysockets",
+    "baileys",
+    "status",
+    "reader",
+    "bot"
+  ],
+  "author": "irwanx",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "baileys": "npm:@riyanofficial/baileys-pro@latest",
+    "cfonts": "^3.3.1",
+    "chalk": "^5.6.0",
+    "link-preview-js": "^3.1.0",
+    "moment-timezone": "^0.6.0",
+    "node-cache": "^5.1.2",
+    "node-fetch": "^3.3.2",
+    "nodemon": "^3.1.14",
+    "pino": "^9.9.4",
+    "prettier": "^3.6.2",
+    "qrcode-terminal": "^0.12.0",
+    "syntax-error": "^1.4.0"
+  }
+}

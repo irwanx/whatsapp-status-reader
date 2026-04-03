@@ -1,13 +1,7 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
-
-wsr-bot.db
-test*
+/node_modules
+package-lock.json
+auth
+store_multi.json
+yarn.lock
+pnpm-lock.yaml
+config.js
