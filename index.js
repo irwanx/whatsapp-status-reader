@@ -1,18 +1,6 @@
-import {
-  makeWASocket,
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore,
-  DisconnectReason,
-  delay,
-  jidNormalizedUser,
-} from "baileys";
-import baileys from "baileys";
-const { proto } = baileys;
-import { Boom } from "@hapi/boom";
+import * as pkg from "@neoxr/wb";
+const { Client } = pkg;
 import NodeCache from "node-cache";
-import readline from "readline";
-import pino from "pino";
 import moment from "moment-timezone";
 import chalk from "chalk";
 import CFonts from "cfonts";
@@ -20,23 +8,13 @@ import { config } from "./config.js";
 import { join, dirname } from "path";
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
+import fs from 'node:fs'
 
-const logger = pino({
-  timestamp: () => `,"time":"${new Date().toJSON()}" `,
-}).child({});
-logger.level = "silent";
+import * as latest from "baileys";
+import past from "baileys";
+const baileys = latest.proto?.WebMessageInfo ? latest : past;
 
-const usePairingCode = process.argv.includes("--pairing-code");
-const msgRetryCounterCache = new NodeCache();
 const readStatusCache = new NodeCache({ stdTTL: 86400 });
-let reconnectAttempts = 0;
-const maxReconnectAttempts = 5;
-let reconnectTimeout = null;
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(__dirname);
@@ -59,257 +37,164 @@ async function connectoWhatsapps() {
     background: "transparent",
   });
 
-  const { state, saveCreds } = await useMultiFileAuthState("auth");
-  const { version, isLatest } = await fetchLatestBaileysVersion();
+  const { version } = await latest.fetchLatestBaileysVersion()
 
-  const sock = makeWASocket({
-    version,
-    logger,
-    printQRInTerminal: !usePairingCode,
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, logger),
+  const client = new Client(
+    {
+      plugsdir: "plugins",
+      online: true,
+      bypass_disappearing: true,
+      bot: (id) => {
+        // Detect message from bot by message ID
+        return id && (id.startsWith("BAE") || /[-]/.test(id));
+      },
+      pairing: {
+        state: true, // Set to 'false' if you want to use QR scan
+        number: config.botNumber, // Your bot number
+        code: "WSRXBOTX",
+      },
+      custom_id: "wsr",
+      presence: true,
+      create_session: {
+        type: "local",
+        session: "session",
+        config: "",
+      },
+      engines: [baileys],
+      debug: false,
     },
-    msgRetryCounterCache,
-    syncFullHistory: true,
-    generateHighQualityLinkPreview: true,
-    patchMessageBeforeSending,
-    getMessage,
-  });
+    {
+      version: version,
+      browser: latest.Browsers.macOS("Safari"),
+      shouldIgnoreJid: (jid) => {
+        return /(newsletter|bot)/.test(jid);
+      },
+    },
+  );
 
-  if (usePairingCode && !sock.authState.creds.registered) {
-    var phoneNumber = await question(
-      chalk.green("📱 Masukkan nomor WhatsApp Anda") +
-        chalk.gray(" (contoh: 628123456789): "),
-    );
-    if (/\d/.test(phoneNumber)) {
-      const code = await sock.requestPairingCode(
-        phoneNumber.replace(/[^0-9]/g, ""),
-      );
-      console.log(
-        chalk.green("✅ Jika ada notifikasi WhatsApp"),
-        "[Memasukkan kode tautan perangkat baru]",
-        chalk.green("maka dipastikan berhasil!"),
-      );
-      console.log(
-        chalk.yellow(`🔑 Kode Penyandingan:`),
-        code.match(/.{1,4}/g).join("-"),
-      );
-    } else {
-      console.log(chalk.red("❌ Nomor telepon tidak valid."));
-      process.exit();
-    }
-  }
-
-  const tryReconnect = () => {
-    if (reconnectAttempts >= maxReconnectAttempts) {
-      console.log(
-        chalk.red(
-          `❌ Batas percobaan reconnect (${maxReconnectAttempts}x) tercapai. Bot dihentikan.`,
-        ),
-      );
-      console.log(
-        chalk.yellow(
-          `💡 Hapus folder 'auth' dan scan QR lagi untuk memulai ulang.`,
-        ),
-      );
-      process.exit(1);
-    }
-    reconnectAttempts++;
-    const delayMs = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-    console.log(
-      chalk.yellow(
-        `Percobaan reconnect ${reconnectAttempts}/${maxReconnectAttempts} dalam ${delayMs / 1000}s...`,
-      ),
-    );
-    reconnectTimeout = setTimeout(() => {
-      connectoWhatsapps();
-    }, delayMs);
-  };
-
-  sock.ev.on("connection.update", function ({ connection, lastDisconnect }) {
-    switch (connection) {
-      case "close":
-        if (reconnectTimeout) {
-          clearTimeout(reconnectTimeout);
-          reconnectTimeout = null;
-        }
-        switch (new Boom(lastDisconnect?.error)?.output?.statusCode) {
-          case DisconnectReason.badSession:
-            console.log(
-              chalk.red(`File Sesi Buruk, harap hapus sesi dan pindai lagi.`),
-            );
-            process.exit(1);
-            break;
-          case DisconnectReason.connectionClosed:
-            console.log(chalk.yellow("Koneksi ditutup, mencoba reconnect..."));
-            tryReconnect();
-            break;
-          case DisconnectReason.connectionLost:
-            console.log(
-              chalk.yellow("Koneksi Hilang dari Server, mencoba reconnect..."),
-            );
-            tryReconnect();
-            break;
-          case DisconnectReason.connectionReplaced:
-            console.log(
-              chalk.yellow(
-                "Koneksi Diganti, sesi baru lainnya dibuka, mencoba reconnect...",
-              ),
-            );
-            tryReconnect();
-            break;
-          case DisconnectReason.loggedOut:
-            console.error(
-              chalk.red(`Perangkat Keluar/Di-logout, silakan pindai lagi.`),
-            );
-            process.exit(1);
-            break;
-          case DisconnectReason.restartRequired:
-            console.log(
-              chalk.yellow("Diperlukan Restart, mencoba reconnect..."),
-            );
-            tryReconnect();
-            break;
-          case DisconnectReason.timedOut:
-            console.log(
-              chalk.yellow("Koneksi Habis Waktu, mencoba reconnect..."),
-            );
-            tryReconnect();
-            break;
-          case DisconnectReason.Multidevicemismatch:
-            console.error(
-              chalk.red(
-                "Ketidakcocokan beberapa perangkat, harap pindai lagi.",
-              ),
-            );
-            process.exit(1);
-            break;
-          default:
-            console.log(chalk.red(lastDisconnect?.error));
-            tryReconnect();
-        }
-        break;
-      case "connecting":
-        console.log(
-          chalk.yellow(
-            `Versi WhatsApp ${version.join(".")} ${isLatest ? "Terbaru" : "Perlu Diperbarui"}`,
-          ),
-        );
-        break;
-      case "open":
-        reconnectAttempts = 0;
-        console.log(chalk.green("✅ Terhubung sebagai:"), sock.user.name);
-        console.log(
-          chalk.green("🔗 Nomor:"),
-          `https://wa.me/${sock.user.id.split(":")[0]}`,
-        );
-        rl.close();
-        break;
-      default:
+  // Sesuai source neoxr: gunakan .once untuk connect
+  client.once("connect", async (res) => {
+    console.log(chalk.green("[✅ Connected to WhatsApp]"));
+    if (res && typeof res === "object" && res.message) {
+      console.log(res.message);
     }
   });
 
-  sock.ev.on("creds.update", function () {
-    saveCreds();
+  // Sesuai source neoxr: error pakai .register
+  client.register("error", async (error) => {
+    console.error(chalk.red(`[❌ Error] ${error?.message || error}`));
   });
 
-  sock.ev.on("messages.upsert", async function ({ messages }) {
-    let body;
-    for (let msg of messages) {
-      if (msg.message) {
-        body = extractText(unwrapMessage(msg.message) || {}) ?? "";
-      }
-      const zonaWaktu = "Asia/Jakarta";
-      const waktuSekarang = moment().tz(zonaWaktu);
-      const timeString = waktuSekarang.format("HH.mm - D MMM");
-      if (config.autoReadStory && msg.key.remoteJid === "status@broadcast") {
-        if (msg.key.fromMe || msg.message?.reactionMessage) return;
-        const botJid = jidNormalizedUser(sock.user.id);
-        const normalizedUploader = jidNormalizedUser(msg.key.participant);
-        if (msg.message?.protocolMessage) return;
-        if (readStatusCache.get(msg.key.id)) return;
-        if (!msg.message || Object.keys(msg.message).length === 0) return;
-        readStatusCache.set(msg.key.id, true);
-        let chosenEmoji;
-        await sock.readMessages([msg.key]);
-        await delay(1000);
-        if (config.autoReactStory) {
-          chosenEmoji = mathRandom(emojiStringToArray(config.reactEmote));
-          try {
-            await sock.sendMessage(
-              "status@broadcast",
-              { react: { text: chosenEmoji, key: msg.key } },
-              { statusJidList: [botJid, normalizedUploader] },
-            );
-          } catch (err) {
-            if (err.message === "not-acceptable" || err.data === 406) {
-              console.log(
-                chalk.yellow(
-                  `[⚠️ React Gagal] Session tidak tersedia untuk ${normalizedUploader?.split("@")[0]}, skip.`,
-                ),
+  // Sesuai source neoxr: ready pakai .once
+  client.once("ready", async () => {
+    console.log(chalk.green("[🤖 Ready] Bot is online!"));
+
+    // Sesuai source neoxr listeners-extra.js:
+    // stories pakai client.register, ctx berisi ctx.message.key dan ctx.sender
+    client.register("stories", async (ctx) => {
+      try {
+        const sock = client.sock;
+
+        // DEBUG: lihat struktur ctx yang masuk
+        console.log(chalk.magenta('[🔍 STORIES CTX]'), JSON.stringify(Object.keys(ctx)));
+        console.log(chalk.magenta('[🔍 STORIES CTX.message]'), JSON.stringify(ctx.message?.key ?? ctx.key ?? 'NO KEY'));
+
+        // ctx.message.key sesuai neoxr source, fallback ke ctx.key
+        const storyKey = ctx.message?.key ?? ctx.key;
+        const sender = ctx.sender ?? ctx.message?.key?.participant;
+
+        if (storyKey && sender && sender !== sock.decodeJid(sock.user.id)) {
+
+          // Cek cache supaya tidak double-read
+          if (readStatusCache.get(storyKey.id)) return;
+          readStatusCache.set(storyKey.id, true);
+
+          const zonaWaktu = "Asia/Jakarta";
+          const timeString = moment().tz(zonaWaktu).format("HH.mm - D MMM");
+          const normalizedUploader = latest.jidNormalizedUser(sender);
+
+          // Auto read story
+          if (config.autoReadStory) {
+            await sock.readMessages([storyKey]);
+            await latest.delay(1000);
+          }
+
+          // Auto react story
+          let chosenEmoji;
+          if (config.autoReactStory) {
+            chosenEmoji = mathRandom(emojiStringToArray(config.reactEmote));
+            try {
+              // Sesuai neoxr: sendMessage ke status@broadcast dengan statusJidList: [ctx.sender]
+              await sock.sendMessage(
+                "status@broadcast",
+                {
+                  react: {
+                    text: chosenEmoji,
+                    key: storyKey,
+                  },
+                },
+                {
+                  statusJidList: [sender],
+                },
               );
-            } else {
-              console.error(chalk.red(`[❌ React Error] ${err.message}`));
+            } catch (err) {
+              if (err.message === "not-acceptable" || err.data === 406) {
+                console.log(
+                  chalk.yellow(
+                    `[⚠️ React Gagal] ${normalizedUploader?.split("@")[0]}, skip.`,
+                  ),
+                );
+              } else {
+                console.error(chalk.red(`[❌ React Error] ${err.message}`));
+              }
             }
           }
+
+          console.log(
+            chalk.blue(`[📢 - ${timeString}]`),
+            `- ${normalizedUploader?.split("@")[0]} (${ctx.pushName || ""}) ${chosenEmoji ?? ""}`,
+          );
         }
-        console.log(
-          chalk.blue(`[📢 - ${timeString}]`),
-          `- ${normalizedUploader?.split("@")[0]} (${msg.pushName}) ${chosenEmoji ?? ""}`,
-        );
+      } catch (e) {
+        console.error(chalk.red(`[❌ Stories Error] ${e.message}`));
       }
-      if (!msg.key.remoteJid.endsWith("@broadcast")) {
-        if (msg.message?.protocolMessage) return;
-        console.log(
-          chalk.cyan(`[💬 - ${timeString}]`),
-          `- ${msg.key.remoteJid.split("@")[0]} (${msg.pushName}) ${body?.slice(0, 15)}`,
-        );
+    });
+
+    // Sesuai source neoxr: message pakai client.register
+    // ctx adalah object langsung (bukan { messages })
+    client.register("message", async (ctx) => {
+      try {
+        // Sesuai neoxr: baileys(client.sock) dipanggil di sini (init handler)
+        setupClient(client.sock);
+
+        const { m, body } = ctx;
+        if (!m) return;
+
+        const zonaWaktu = "Asia/Jakarta";
+        const timeString = moment().tz(zonaWaktu).format("HH.mm - D MMM");
+
+        // Log pesan masuk yang bukan broadcast
+        if (m.chat && !m.chat.endsWith("@broadcast")) {
+          if (m.message?.protocolMessage) return;
+          console.log(
+            chalk.cyan(`[💬 - ${timeString}]`),
+            `- ${m.chat.split("@")[0]} (${m.pushName || ""}) ${(body ?? "").slice(0, 15)}`,
+          );
+        }
+      } catch (e) {
+        console.error(chalk.red(`[❌ Message Error] ${e.message}`));
       }
-    }
+    });
   });
 
-  return sock;
-
-  function patchMessageBeforeSending(message) {
-    const requiresPatch = !!(
-      message.buttonsMessage ||
-      message.templateMessage ||
-      message.listMessage
-    );
-    if (requiresPatch) {
-      message = {
-        viewOnceMessage: {
-          message: {
-            messageContextInfo: {
-              deviceListMetadataVersion: 2,
-              deviceListMetadata: {},
-            },
-            ...message,
-          },
-        },
-      };
-    }
-    return message;
-  }
-
-  async function getMessage(key) {
-    if (store) {
-      const msg = await store.loadMessage(key.remoteJid, key.id);
-      return msg?.message || undefined;
-    }
-    return proto.Message.fromObject({});
-  }
+  return client;
 }
 
 function emojiStringToArray(str) {
   const spl = str.split(/([\uD800-\uDBFF][\uDC00-\uDFFF])/);
   const arr = [];
   for (let i = 0; i < spl.length; i++) {
-    let char = spl[i];
-    if (char !== "") {
-      arr.push(char);
-    }
+    if (spl[i] !== "") arr.push(spl[i]);
   }
   return arr;
 }
@@ -318,27 +203,50 @@ function mathRandom(x) {
   return x[Math.floor(x.length * Math.random())];
 }
 
-function unwrapMessage(message) {
-  if (!message) return null;
-  if (message.ephemeralMessage)
-    return unwrapMessage(message.ephemeralMessage.message);
-  if (message.viewOnceMessage)
-    return unwrapMessage(message.viewOnceMessage.message);
-  return message;
+function setupClient(client) {
+   /**
+    * Gets the name associated with a user's JID from the global database.
+    * @param {string} jid - The JID (WhatsApp ID) of the user.
+    * @returns {string|null} - The name of the user, or null if the user is not found.
+    */
+   client.getName = jid => {
+      const isFound = global.db.users.find(v => v.jid === client.decodeJid(jid))
+      if (!isFound) return null
+      return isFound.name
+   }
+
+   /**
+    * Get all admin and superadmin IDs from a group participants list.
+    *
+    * @param {Array} participants - Array of participant objects from the group metadata.
+    * @returns {Array<string>} List of participant IDs who are admins or superadmins.
+    */
+   client.getAdmin = participants => participants
+      ?.filter(i => i.admin === 'admin' || i.admin === 'superadmin')
+      ?.map(i => i.id) || []
+
+   /**
+    * Fetches the profile picture of a given WhatsApp JID.
+    *
+    * If the user has no profile picture or if an error occurs while fetching it,
+    * the function will return a default image instead.
+    *
+    * @param {string} jid - The WhatsApp JID (user identifier) whose profile picture is requested.
+    * @returns {Promise<string|Buffer>} - A URL of the profile picture if available, 
+    *                                     otherwise the default image as a Buffer.
+    */
+   client.profilePicture = async jid => {
+      const defaults = fs.readFileSync('./media/image/default.jpg')
+      try {
+         const picture = await client.profilePictureUrl(jid, 'image')
+         return picture ?? defaults
+      } catch (e) {
+         return defaults
+      }
+   }
 }
 
-function extractText(msg = {}) {
-  return (
-    msg?.conversation ||
-    msg?.extendedTextMessage?.text ||
-    msg?.imageMessage?.caption ||
-    msg?.videoMessage?.caption ||
-    msg?.documentMessage?.caption ||
-    msg?.buttonsResponseMessage?.selectedButtonId ||
-    msg?.listResponseMessage?.title ||
-    msg?.templateButtonReplyMessage?.selectedId ||
-    ""
-  );
-}
-
-connectoWhatsapps();
+connectoWhatsapps().catch((e) => {
+  console.error(chalk.red(`[❌ Fatal] ${e.message}`));
+  connectoWhatsapps();
+});

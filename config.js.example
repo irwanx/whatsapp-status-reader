@@ -17,4 +17,10 @@ export const config = {
    * @type {string}
    */
   reactEmote: "✨",
+
+  /**
+   * @description Nomor WhatsApp bot dalam format internasional tanpa tanda plus.
+   * @type {string}
+   */
+  botNumber: "62888xxxxxxxxx",
 };
