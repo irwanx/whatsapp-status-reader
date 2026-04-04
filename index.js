@@ -95,10 +95,6 @@ async function connectoWhatsapps() {
       try {
         const sock = client.sock;
 
-        // DEBUG: lihat struktur ctx yang masuk
-        console.log(chalk.magenta('[🔍 STORIES CTX]'), JSON.stringify(Object.keys(ctx)));
-        console.log(chalk.magenta('[🔍 STORIES CTX.message]'), JSON.stringify(ctx.message?.key ?? ctx.key ?? 'NO KEY'));
-
         // ctx.message.key sesuai neoxr source, fallback ke ctx.key
         const storyKey = ctx.message?.key ?? ctx.key;
         const sender = ctx.sender ?? ctx.message?.key?.participant;
