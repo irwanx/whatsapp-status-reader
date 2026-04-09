@@ -24,8 +24,8 @@ let db;
 /** Inisialisasi DB — panggil sekali saat startup */
 export async function initStoryDb() {
   db = await JSONFilePreset(DB_PATH, defaultData);
-  db.data.readStatus ??= {};
-  db.data.rateLimit ??= {};
+  if (!db.data.readStatus) db.data.readStatus = {};
+  if (!db.data.rateLimit) db.data.rateLimit = {};
   await db.write();
   console.log("[📦 StoryDB] Database siap:", DB_PATH);
 }
@@ -52,7 +52,7 @@ export async function markAsRead(storyId, info = {}) {
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 
-const RATE_LIMIT_COUNT = 5;          // Maks story per window
+const RATE_LIMIT_COUNT = 5; // Maks story per window
 const RATE_LIMIT_WINDOW_MS = 60_000; // 1 menit
 
 /**
@@ -65,7 +65,7 @@ export async function isRateLimited(sender) {
 
   // Ambil timestamps dalam window, buang yang sudah expired
   const timestamps = (db.data.rateLimit[sender] ?? []).filter(
-    (ts) => ts > windowStart
+    (ts) => ts > windowStart,
   );
 
   if (timestamps.length >= RATE_LIMIT_COUNT) {
