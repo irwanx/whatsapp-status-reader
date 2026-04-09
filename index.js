@@ -8,10 +8,20 @@ import { config } from "./config.js";
 import { join, dirname } from "path";
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
-import fs from 'node:fs'
-
+import fs from "node:fs";
 import * as latest from "baileys";
 import past from "baileys";
+import {
+  initStoryDb,
+  cleanupOldData,
+  isAlreadyRead,
+  markAsRead,
+  isRateLimited,
+} from "./database/storyDb.js";
+
+await initStoryDb();
+await cleanupOldData();
+
 const baileys = latest.proto?.WebMessageInfo ? latest : past;
 
 const readStatusCache = new NodeCache({ stdTTL: 86400 });
@@ -37,7 +47,7 @@ async function connectoWhatsapps() {
     background: "transparent",
   });
 
-  const { version } = await latest.fetchLatestBaileysVersion()
+  const { version } = await latest.fetchLatestBaileysVersion();
 
   const client = new Client(
     {
@@ -49,8 +59,8 @@ async function connectoWhatsapps() {
         return id && (id.startsWith("BAE") || /[-]/.test(id));
       },
       pairing: {
-        state: true, // Set to 'false' if you want to use QR scan
-        number: config.botNumber, // Your bot number
+        state: process.argv.includes("--pairing-code") || false,
+        number: config.botNumber,
         code: "WSRXBOTX",
       },
       custom_id: "wsr",
@@ -95,62 +105,117 @@ async function connectoWhatsapps() {
       try {
         const sock = client.sock;
 
-        // ctx.message.key sesuai neoxr source, fallback ke ctx.key
         const storyKey = ctx.message?.key ?? ctx.key;
         const sender = ctx.sender ?? ctx.message?.key?.participant;
 
-        if (storyKey && sender && sender !== sock.decodeJid(sock.user.id)) {
+        if (!storyKey || !sender) return;
 
-          // Cek cache supaya tidak double-read
-          if (readStatusCache.get(storyKey.id)) return;
-          readStatusCache.set(storyKey.id, true);
+        // Skip reactionMessage dan senderKeyDistributionMessage — bukan story baru
+        const msgKeys = Object.keys(ctx.message?.message ?? {});
+        const isRealStory = msgKeys.some(
+          (k) =>
+            ![
+              "reactionMessage",
+              "senderKeyDistributionMessage",
+              "messageContextInfo",
+            ].includes(k),
+        );
+        if (!isRealStory) return;
 
-          const zonaWaktu = "Asia/Jakarta";
-          const timeString = moment().tz(zonaWaktu).format("HH.mm - D MMM");
-          const normalizedUploader = latest.jidNormalizedUser(sender);
+        // Normalisasi JID bot & sender agar format selalu sama sebelum dibandingkan
+        const botJid = latest.jidNormalizedUser(sock.user?.id ?? "");
+        const senderJid = latest.jidNormalizedUser(sender);
+        if (!senderJid || senderJid === botJid) return;
 
-          // Auto read story
-          if (config.autoReadStory) {
-            await sock.readMessages([storyKey]);
-            await latest.delay(1000);
-          }
+        // Bulatkan timestamp ke menit agar retry baileys (beda beberapa detik)
+        // dari story yang SAMA tidak dianggap story berbeda
+        const msgTs =
+          ctx.message?.messageTimestamp ?? ctx.messageTimestamp ?? storyKey.id;
+        const tsPerMenit = Math.floor(Number(msgTs) / 60) * 60;
+        const uniqueKey = `${senderJid}__${tsPerMenit}`;
 
-          // Auto react story
-          let chosenEmoji;
-          if (config.autoReactStory) {
-            chosenEmoji = mathRandom(emojiStringToArray(config.reactEmote));
-            try {
-              // Sesuai neoxr: sendMessage ke status@broadcast dengan statusJidList: [ctx.sender]
-              await sock.sendMessage(
-                "status@broadcast",
-                {
-                  react: {
-                    text: chosenEmoji,
-                    key: storyKey,
-                  },
+        // 1. Cek DB: sudah pernah diproses? (persistent, tahan restart)
+        if (isAlreadyRead(uniqueKey)) return;
+
+        // 2. Rate limit: >5 story dari sender yang sama dalam 1 menit → skip
+        if (await isRateLimited(senderJid)) {
+          console.log(
+            chalk.yellow(
+              `[⏭️ Rate Limit] ${senderJid.split("@")[0]} — lebih dari 5 story/menit, skip.`,
+            ),
+          );
+          return;
+        }
+
+        const zonaWaktu = "Asia/Jakarta";
+        const timeString = moment().tz(zonaWaktu).format("HH.mm - D MMM");
+        const normalizedUploader = senderJid;
+
+        // Auto read story
+        if (config.autoReadStory) {
+          await sock.readMessages([storyKey]);
+          await latest.delay(1000);
+        }
+
+        // Auto react story
+        let chosenEmoji;
+        if (config.autoReactStory) {
+          chosenEmoji = mathRandom(emojiStringToArray(config.reactEmote));
+          try {
+            await sock.sendMessage(
+              "status@broadcast",
+              {
+                react: {
+                  text: chosenEmoji,
+                  key: storyKey,
                 },
-                {
-                  statusJidList: [sender],
-                },
+              },
+              {
+                statusJidList: [sender],
+              },
+            );
+          } catch (err) {
+            if (err.message === "not-acceptable" || err.data === 406) {
+              console.log(
+                chalk.yellow(
+                  `[⚠️ React Gagal] ${normalizedUploader?.split("@")[0]}, skip.`,
+                ),
               );
-            } catch (err) {
-              if (err.message === "not-acceptable" || err.data === 406) {
-                console.log(
-                  chalk.yellow(
-                    `[⚠️ React Gagal] ${normalizedUploader?.split("@")[0]}, skip.`,
-                  ),
-                );
-              } else {
-                console.error(chalk.red(`[❌ React Error] ${err.message}`));
-              }
+            } else {
+              console.error(chalk.red(`[❌ React Error] ${err.message}`));
             }
           }
-
-          console.log(
-            chalk.blue(`[📢 - ${timeString}]`),
-            `- ${normalizedUploader?.split("@")[0]} (${ctx.pushName || ""}) ${chosenEmoji ?? ""}`,
-          );
         }
+
+        // Deteksi tipe konten story
+        const msgContent = ctx.message?.message ?? {};
+        const storyType =
+          Object.keys(msgContent).find(
+            (k) =>
+              k !== "senderKeyDistributionMessage" &&
+              k !== "messageContextInfo",
+          ) ?? "unknown";
+        const caption =
+          msgContent?.imageMessage?.caption ||
+          msgContent?.videoMessage?.caption ||
+          msgContent?.extendedTextMessage?.text ||
+          msgContent?.conversation ||
+          "";
+
+        // 3. Simpan ke DB dengan info konten story
+        await markAsRead(uniqueKey, {
+          sender: senderJid,
+          pushName: ctx.pushName || "",
+          type: storyType,
+          caption: caption.slice(0, 200),
+          emoji: chosenEmoji ?? "",
+          time: timeString,
+        });
+
+        console.log(
+          chalk.blue(`[📢 - ${timeString}]`),
+          `- ${normalizedUploader?.split("@")[0]} (${ctx.pushName || ""}) ${chosenEmoji ?? ""}`,
+        );
       } catch (e) {
         console.error(chalk.red(`[❌ Stories Error] ${e.message}`));
       }
@@ -200,46 +265,49 @@ function mathRandom(x) {
 }
 
 function setupClient(client) {
-   /**
-    * Gets the name associated with a user's JID from the global database.
-    * @param {string} jid - The JID (WhatsApp ID) of the user.
-    * @returns {string|null} - The name of the user, or null if the user is not found.
-    */
-   client.getName = jid => {
-      const isFound = global.db.users.find(v => v.jid === client.decodeJid(jid))
-      if (!isFound) return null
-      return isFound.name
-   }
+  /**
+   * Gets the name associated with a user's JID from the global database.
+   * @param {string} jid - The JID (WhatsApp ID) of the user.
+   * @returns {string|null} - The name of the user, or null if the user is not found.
+   */
+  client.getName = (jid) => {
+    const isFound = global.db.users.find(
+      (v) => v.jid === client.decodeJid(jid),
+    );
+    if (!isFound) return null;
+    return isFound.name;
+  };
 
-   /**
-    * Get all admin and superadmin IDs from a group participants list.
-    *
-    * @param {Array} participants - Array of participant objects from the group metadata.
-    * @returns {Array<string>} List of participant IDs who are admins or superadmins.
-    */
-   client.getAdmin = participants => participants
-      ?.filter(i => i.admin === 'admin' || i.admin === 'superadmin')
-      ?.map(i => i.id) || []
+  /**
+   * Get all admin and superadmin IDs from a group participants list.
+   *
+   * @param {Array} participants - Array of participant objects from the group metadata.
+   * @returns {Array<string>} List of participant IDs who are admins or superadmins.
+   */
+  client.getAdmin = (participants) =>
+    participants
+      ?.filter((i) => i.admin === "admin" || i.admin === "superadmin")
+      ?.map((i) => i.id) || [];
 
-   /**
-    * Fetches the profile picture of a given WhatsApp JID.
-    *
-    * If the user has no profile picture or if an error occurs while fetching it,
-    * the function will return a default image instead.
-    *
-    * @param {string} jid - The WhatsApp JID (user identifier) whose profile picture is requested.
-    * @returns {Promise<string|Buffer>} - A URL of the profile picture if available, 
-    *                                     otherwise the default image as a Buffer.
-    */
-   client.profilePicture = async jid => {
-      const defaults = fs.readFileSync('./media/image/default.jpg')
-      try {
-         const picture = await client.profilePictureUrl(jid, 'image')
-         return picture ?? defaults
-      } catch (e) {
-         return defaults
-      }
-   }
+  /**
+   * Fetches the profile picture of a given WhatsApp JID.
+   *
+   * If the user has no profile picture or if an error occurs while fetching it,
+   * the function will return a default image instead.
+   *
+   * @param {string} jid - The WhatsApp JID (user identifier) whose profile picture is requested.
+   * @returns {Promise<string|Buffer>} - A URL of the profile picture if available,
+   *                                     otherwise the default image as a Buffer.
+   */
+  client.profilePicture = async (jid) => {
+    const defaults = fs.readFileSync("./media/image/default.jpg");
+    try {
+      const picture = await client.profilePictureUrl(jid, "image");
+      return picture ?? defaults;
+    } catch (e) {
+      return defaults;
+    }
+  };
 }
 
 connectoWhatsapps().catch((e) => {
