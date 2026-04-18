@@ -9,5 +9,5 @@ wheels/
 # Virtual environments
 .venv
 
-wsr-bot.db
+wsr-bot*
 test*

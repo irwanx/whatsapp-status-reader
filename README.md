@@ -15,61 +15,48 @@
 
 ---
 
-Sebuah bot WhatsApp otomatis berbasis Python yang membaca dan memantau status WhatsApp secara efisien menggunakan [Neonize](https://github.com/krypton-byte/neonize) — Python wrapper untuk [whatsmeow](https://github.com/tulir/whatsmeow).
+Bot WhatsApp otomatis berbasis Python yang menandai status WhatsApp kontak sebagai "sudah dibaca" secara real-time menggunakan [Neonize](https://github.com/krypton-byte/neonize) — Python wrapper untuk [whatsmeow](https://github.com/tulir/whatsmeow).
 
 > **Disclaimer:** Proyek ini bukan produk resmi WhatsApp/Meta. Gunakan dengan bijak dan sesuai ketentuan layanan WhatsApp.
 
 ---
 
-## 📝 Deskripsi
-
-**WhatsApp Status Reader** memungkinkan Anda memantau status WhatsApp kontak secara otomatis tanpa perlu membuka aplikasi secara manual. Bot ini berjalan di background dan menandai status sebagai "sudah dibaca" secara real-time.
-
-Cocok untuk:
-- Memantau status teman/keluarga secara otomatis
-- Dasar untuk integrasi atau proyek WhatsApp automation pribadi
-
----
-
-## 🚀 Fitur Utama
+## 🚀 Fitur
 
 | Fitur | Keterangan |
 |-------|------------|
-| ✅ Auto-read status | Membaca status WhatsApp secara otomatis tanpa interaksi manual |
-| ⚡ Neonize + whatsmeow | Koneksi stabil berbasis Go bridge yang battle-tested |
-| 🔑 Pairing Code | Login mudah via pairing code — tanpa scan QR |
-| 🗄️ SQLite WAL | Database ringan dengan mode WAL untuk performa concurrency |
-| 🐍 Python + uv | Setup cepat tanpa ribet virtual environment manual |
-| 🔇 Clean output | Log bersih, hanya menampilkan info yang relevan |
+| 👁️ Auto-read status | Menandai status WhatsApp sebagai dibaca secara otomatis |
+| ⚡ Neonize + whatsmeow | Koneksi stabil berbasis Go bridge |
+| 🔑 Pairing Code | Login via kode — **tanpa scan QR** |
+| 🗄️ SQLite | Sesi login tersimpan, tidak perlu pairing ulang |
+| 🐍 uv | Setup cepat tanpa ribet virtual environment manual |
+| 📋 PM2 Ready | Log bersih dengan `flush=True`, siap dijalankan via PM2 |
 
 ---
 
 ## 📁 Struktur Folder
 
 ```
-whatsapp-status-reader/
-├── main.py              # Entry point utama bot
-├── wsr-bot.db           # Database SQLite (dibuat otomatis saat pertama run)
-├── pyproject.toml       # Konfigurasi project & dependensi (uv)
+wsr-py/
+├── main.py               # Entry point bot
+├── db.sqlite3           # Database sesi (dibuat otomatis)
+├── pyproject.toml       # Konfigurasi project & dependensi
 ├── uv.lock              # Lockfile dependensi
-├── .python-version      # Versi Python yang digunakan
+├── .python-version      # Versi Python
 ├── .gitignore
 └── README.md
 ```
 
-> `wsr-bot.db` sudah masuk `.gitignore` — sesi login kamu tidak akan ikut ter-commit.
+> `db.sqlite3` sudah masuk `.gitignore` — sesi login tidak akan ikut ter-commit.
 
 ---
 
 ## 📦 Prasyarat
 
-Pastikan sudah terinstal:
-
-- [Git](https://git-scm.com/downloads)
 - [Python](https://www.python.org/downloads/) `>= 3.11`
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) — fast Python package & project manager
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
-### Instalasi uv
+### Install uv
 
 **Windows (PowerShell):**
 ```powershell
@@ -80,8 +67,6 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
-
-Panduan lengkap: [https://docs.astral.sh/uv/getting-started/installation/](https://docs.astral.sh/uv/getting-started/installation/)
 
 ---
 
@@ -100,46 +85,76 @@ cd whatsapp-status-reader
 uv sync
 ```
 
-uv akan otomatis membuat virtual environment dan menginstal semua dependensi yang dibutuhkan.
-
 ### 3. Jalankan bot
 
 ```bash
 uv run main.py
 ```
 
-**Pertama kali run:**
-Bot akan meminta nomor HP kamu (format: `628xxxxxxxx`). Setelah dimasukkan, kamu akan menerima **pairing code** di notifikasi WhatsApp. Masukkan kode tersebut di perangkat WhatsApp kamu.
+**Pertama kali run** — bot akan meminta nomor HP:
 
 ```
-Masukkan nomor HP (contoh: 628xxxxxxxx): 6281234567890
-[*] Memanggil client.connect()...
-⚡ Bot sudah online!
-✅ Status dari 6281234567890 otomatis dibaca
+Masukkan nomor HP (contoh: 628123456789): 628123456789
+[19:04:26] 📱 Pair code: ABCD-1234
 ```
 
-**Run berikutnya:**
-Bot langsung terhubung tanpa perlu pairing ulang — sesi tersimpan di `wsr-bot.db`.
+Masukkan kode tersebut di WhatsApp: **Setelan → Perangkat Tertaut → Tautkan Perangkat**.
+
+Setelah berhasil:
+
+```
+[19:04:48] 🔗 Logged as 628123456789
+[19:04:55] 👁️  Status dari 628987654321 ditandai dibaca
+```
+
+**Run berikutnya** — bot langsung konek tanpa pairing ulang.
+
+---
+
+## 🖥️ Menjalankan dengan PM2
+
+Cocok untuk server/VPS agar bot berjalan terus di background.
+
+### Install PM2
+
+```bash
+npm install -g pm2
+```
+
+### Jalankan bot via PM2
+
+> **Pastikan sudah pairing dulu** (`uv run main.py`) sebelum pakai PM2, karena PM2 tidak bisa menerima input interaktif.
+
+```bash
+pm2 start "uv run main.py" --name wsr-bot
+```
+
+### Perintah PM2 berguna
+
+```bash
+pm2 logs wsr-bot       # lihat log real-time
+pm2 status             # cek status bot
+pm2 restart wsr-bot    # restart bot
+pm2 stop wsr-bot       # stop bot
+pm2 startup            # auto-start saat server reboot
+pm2 save               # simpan konfigurasi PM2
+```
 
 ---
 
 ## 🤝 Kontribusi
 
-Kontribusi sangat welcome! Berikut cara berkontribusi:
-
 1. Fork repositori ini
 2. Buat branch baru: `git checkout -b feat/nama-fitur`
-3. Commit perubahan: `git commit -m "feat: tambah fitur X"`
-4. Push ke branch: `git push origin feat/nama-fitur`
+3. Commit: `git commit -m "feat: tambah fitur X"`
+4. Push: `git push origin feat/nama-fitur`
 5. Buat Pull Request
-
-Untuk perubahan besar, buka Issue terlebih dahulu untuk diskusi.
 
 ---
 
 ## 📄 Lisensi
 
-Proyek ini dilisensikan di bawah **MIT License** — lihat file [LICENSE](LICENSE) untuk detail.
+[MIT](LICENSE) © [irwanx](https://github.com/irwanx)
 
 ---
 
@@ -147,27 +162,28 @@ Proyek ini dilisensikan di bawah **MIT License** — lihat file [LICENSE](LICENS
 
 ## 🇬🇧 English Version
 
-**WhatsApp Status Reader** is a Python-based WhatsApp bot that automatically reads and monitors WhatsApp statuses in real-time using [Neonize](https://github.com/krypton-byte/neonize), a Python wrapper for [whatsmeow](https://github.com/tulir/whatsmeow).
+A Python-based WhatsApp bot that automatically marks WhatsApp statuses as "read" in real-time using [Neonize](https://github.com/krypton-byte/neonize), a Python wrapper for [whatsmeow](https://github.com/tulir/whatsmeow).
 
 > **Disclaimer:** This is not an official WhatsApp/Meta product. Use responsibly and in accordance with WhatsApp's Terms of Service.
 
-### Key Features
+### Features
 
 | Feature | Description |
 |---------|-------------|
-| ✅ Auto-read status | Automatically reads WhatsApp statuses without manual interaction |
-| ⚡ Neonize + whatsmeow | Stable connection via battle-tested Go bridge |
-| 🔑 Pairing Code | Easy login via pairing code — no QR scan needed |
-| 🗄️ SQLite WAL | Lightweight DB with WAL mode for concurrency performance |
-| 🐍 Python + uv | Fast setup without manual virtual environment hassle |
+| 👁️ Auto-read status | Automatically marks WhatsApp statuses as read |
+| ⚡ Neonize + whatsmeow | Stable connection via Go bridge |
+| 🔑 Pairing Code | Login via code — **no QR scan needed** |
+| 🗄️ SQLite | Session persists, no re-pairing needed |
+| 🐍 uv | Fast setup without manual venv hassle |
+| 📋 PM2 Ready | Clean logs with `flush=True`, ready for PM2 |
 
 ### Project Structure
 
 ```
-whatsapp-status-reader/
-├── main.py              # Bot entry point
-├── wsr-bot.db           # SQLite database (auto-created on first run)
-├── pyproject.toml       # Project config & dependencies (uv)
+wsr-py/
+├── main.py               # Bot entry point
+├── db.sqlite3           # Session database (auto-created)
+├── pyproject.toml       # Project config & dependencies
 ├── uv.lock              # Dependency lockfile
 ├── .python-version      # Python version pin
 ├── .gitignore
@@ -177,26 +193,27 @@ whatsapp-status-reader/
 ### Quick Start
 
 ```bash
-# Clone
 git clone https://github.com/irwanx/whatsapp-status-reader.git
 cd whatsapp-status-reader
 
-# Install uv (if not installed)
-# Windows:  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-# macOS/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install dependencies
 uv sync
-
-# Run
 uv run main.py
 ```
 
-On first run, enter your phone number (`628xxxxxxxx`) and enter the pairing code sent to your WhatsApp. Subsequent runs will reuse the saved session automatically.
+On first run, enter your phone number (`628xxxxxxxx`) and enter the pairing code in WhatsApp: **Settings → Linked Devices → Link a Device**.
 
-### Contributing
+Subsequent runs will reuse the saved session automatically.
 
-PRs are welcome! Please open an Issue first for major changes. Follow the same branch naming convention: `feat/`, `fix/`, `docs/`.
+### Running with PM2
+
+> Pair your account first (`uv run main.py`) before using PM2, since PM2 can't handle interactive input.
+
+```bash
+npm install -g pm2
+pm2 start "uv run main.py" --name wsr-bot
+pm2 logs wsr-bot
+pm2 startup && pm2 save
+```
 
 ### License
 
