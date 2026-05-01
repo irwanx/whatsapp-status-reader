@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import time
+import qrcode
 from neonize.aioze.client import NewAClient, ClientFactory
 from neonize.aioze.events import ConnectedEv, MessageEv, PairStatusEv, ReceiptEv, CallOfferEv, event
 from neonize._binder import gocode
@@ -25,7 +26,7 @@ def interrupted(*_):
     asyncio.run_coroutine_threadsafe(ClientFactory.stop(), loop)
 
 
-log.setLevel(logging.INFO)
+log.setLevel(logging.ERROR)
 signal.signal(signal.SIGINT, interrupted)
 
 client = NewAClient("wsr-bot.sqlite3")
@@ -110,7 +111,15 @@ async def PairStatusMessage(_: NewAClient, message: PairStatusEv):
 
 @client.qr
 async def on_qr(_: NewAClient, qr: bytes):
-    pass
+    print("\n" + "="*40)
+    print("          SCAN QR CODE BERIKUT")
+    print("="*40)
+    qr_obj = qrcode.QRCode()
+    qr_obj.add_data(qr)
+    qr_obj.print_ascii(invert=True)
+    print("="*40)
+    print("Buka WhatsApp > Perangkat Tertaut > Tautkan")
+    print("="*40 + "\n")
 
 
 @client.paircode
@@ -122,9 +131,6 @@ async def on_paircode(client: NewAClient, code: str, connected: bool = True):
 
 
 async def main():
-    await client.connect()
-    await asyncio.sleep(1)
-
     import sqlite3
     is_logged = False
     try:
@@ -136,15 +142,33 @@ async def main():
         pass
 
     if not is_logged:
-        phone = input("Masukkan nomor HP (contoh: 628123456789): ").strip()
-        await asyncio.sleep(1)
-        code = await client.PairPhone(
-            phone,
-            show_push_notification=True,
-        )
-        print(f"[{time.strftime('%H:%M:%S')}] 📱 Masukkan kode ini di WhatsApp > Perangkat Tertaut > Tautkan Perangkat: {code}", flush=True)
+        print("\n--- LOGIN WHATSAPP ---")
+        print("1. Scan QR Code")
+        print("2. Pairing Code (Nomor HP)")
+        pilihan = input("Pilih metode (1/2): ").strip()
+
+        if pilihan == "2":
+            phone = input("Masukkan nomor HP (contoh: 628123456789): ").strip()
+            await client.connect()
+            # Wait a bit for connection to stabilize before pairing
+            await asyncio.sleep(2)
+            code = await client.PairPhone(
+                phone,
+                show_push_notification=True,
+            )
+            print(f"\n[{time.strftime('%H:%M:%S')}] 📱 Kode Pairing Anda: {code}")
+            print("Masukkan kode ini di WhatsApp HP Anda.")
+        else:
+            print(f"[{time.strftime('%H:%M:%S')}] [*] Menyiapkan QR Code...")
+            await client.connect()
+    else:
+        await client.connect()
 
     await client.idle()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
 
 
 if __name__ == "__main__":
