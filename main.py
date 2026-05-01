@@ -20,6 +20,8 @@ REACTION_ENABLED = True   # set False untuk nonaktifkan reaksi
 REACTION_EMOJI   = "❤️"  # emoji reaksi status WA: ❤️ 😂 😮 😢 🙏 👏
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Cache untuk mencegah duplikasi status (menghindari spam)
+processed_statuses = set()
 
 def interrupted(*_):
     loop = asyncio.get_event_loop()
@@ -52,6 +54,20 @@ async def on_message(client: NewAClient, message: MessageEv):
         if chat.User != "status" or chat.Server != "broadcast":
             return
 
+        # Cek apakah status ini sudah pernah diproses (berdasarkan ID)
+        if id_ in processed_statuses:
+            return
+        
+        # Ekstrak konten teks/caption
+        msg = message.Message
+        content = (
+            msg.conversation or 
+            msg.extendedTextMessage.text or 
+            msg.imageMessage.caption or 
+            msg.videoMessage.caption or 
+            ""
+        ).strip()
+        
         # Resolve LID ke phone number
         actual_sender = sender
         if sender.Server == "lid":
@@ -65,6 +81,26 @@ async def on_message(client: NewAClient, message: MessageEv):
                     actual_sender = model.Jid
             except Exception:
                 pass
+
+        if not actual_sender.User:
+            return
+
+        # Kunci unik: Nomor + Isi (Jika isi kosong, cuma Nomor)
+        # Jika status berupa foto tanpa teks, 'content' akan kosong.
+        content_key = f"{actual_sender.User}:{content}"
+        
+        # Cek apakah ID atau Konten sudah pernah diproses
+        if id_ in processed_statuses or content_key in processed_statuses:
+            # Jika konten kosong dan kita sudah pernah memproses status kosong dari orang ini, skip.
+            # Ini mencegah spam status foto/video tanpa caption saat session error.
+            return
+
+        processed_statuses.add(id_)
+        processed_statuses.add(content_key)
+
+        # Batasi ukuran cache
+        if len(processed_statuses) > 2000:
+            for _ in range(50): processed_statuses.pop()
 
         # ── 1. Mark as Read ────────────────────────────────────────────────
         chat_proto   = chat.SerializeToString()
@@ -84,7 +120,7 @@ async def on_message(client: NewAClient, message: MessageEv):
         if err:
             print(f"[{ts}] ❌ Gagal mark_read {actual_sender.User}: {err}", flush=True)
         else:
-            print(f"[{ts}] 👁️  Status dari {actual_sender.User} ditandai dibaca", flush=True)
+            print(f"[{ts}] 👁️  Status dari {actual_sender.User} ditandai dibaca (ID: {id_})", flush=True)
 
         # ── 2. Reaksi ke Status ────────────────────────────────────────────
         if REACTION_ENABLED:
@@ -165,10 +201,6 @@ async def main():
         await client.connect()
 
     await client.idle()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
 
 
 if __name__ == "__main__":
