@@ -85,7 +85,30 @@ cd whatsapp-status-reader
 uv sync
 ```
 
-### 3. Jalankan bot
+### 3. Konfigurasi file `.env`
+
+Salin file `.env.example` ke `.env` dan sesuaikan konfigurasinya:
+
+**Windows (PowerShell):**
+```powershell
+cp .env.example .env
+```
+
+**macOS / Linux:**
+```bash
+cp .env.example .env
+```
+
+Buka file `.env` dan atur nilai reaksinya jika diperlukan:
+```env
+# Mengaktifkan/nonaktifkan reaksi status (true untuk aktif, false untuk mati)
+REACTION_ENABLED=true
+
+# Emoji yang digunakan untuk reaksi status (contoh: ❤️, 😂, 😮, 😢, 🙏, 👏)
+REACTION_EMOJI=❤️
+```
+
+### 4. Jalankan bot
 
 ```bash
 uv run main.py
@@ -192,11 +215,34 @@ wsr-py/
 
 ### Quick Start
 
+1. Clone the repository:
 ```bash
 git clone https://github.com/irwanx/whatsapp-status-reader.git
 cd whatsapp-status-reader
+```
 
+2. Install dependencies:
+```bash
 uv sync
+```
+
+3. Configure `.env` file:
+Copy `.env.example` to `.env` and set your preferred configurations:
+```bash
+cp .env.example .env
+```
+
+Open `.env` and adjust the variables:
+```env
+# Enable/disable status reaction (true/false)
+REACTION_ENABLED=true
+
+# Emoji to use for status reaction
+REACTION_EMOJI=❤️
+```
+
+4. Run the bot:
+```bash
 uv run main.py
 ```
 

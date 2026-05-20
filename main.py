@@ -15,13 +15,23 @@ import signal
 
 sys.path.insert(0, os.getcwd())
 
-# ── Konfigurasi ────────────────────────────────────────────────────────────────
-REACTION_ENABLED = True   # set False untuk nonaktifkan reaksi
-REACTION_EMOJI   = "❤️"  # emoji reaksi status WA: ❤️ 😂 😮 😢 🙏 👏
+# ── Konfigurasi (.env) ────────────────────────────────────────────────────────
+if os.path.exists(".env"):
+    with open(".env", "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                parts = line.split("=", 1)
+                if len(parts) == 2:
+                    os.environ[parts[0].strip()] = parts[1].strip().strip("'\"")
+
+REACTION_ENABLED = os.environ.get("REACTION_ENABLED", "true").lower() in ("true", "1", "yes")
+REACTION_EMOJI   = os.environ.get("REACTION_EMOJI", "❤️")
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Cache untuk mencegah duplikasi status (menghindari spam)
 processed_statuses = set()
+login_method = "1"
 
 def interrupted(*_):
     loop = asyncio.get_event_loop()
@@ -53,6 +63,13 @@ async def on_message(client: NewAClient, message: MessageEv):
 
         if chat.User != "status" or chat.Server != "broadcast":
             return
+
+        # Abaikan pesan reaksi (status reaction) dan protocolMessage (status didelete)
+        if message.HasField("Message"):
+            if (message.Message.HasField("reactionMessage") or 
+                message.Message.HasField("encReactionMessage") or 
+                message.Message.HasField("protocolMessage")):
+                return
 
         # Cek apakah status ini sudah pernah diproses (berdasarkan ID)
         if id_ in processed_statuses:
@@ -147,6 +164,8 @@ async def PairStatusMessage(_: NewAClient, message: PairStatusEv):
 
 @client.qr
 async def on_qr(_: NewAClient, qr: bytes):
+    if login_method == "2":
+        return
     print("\n" + "="*40)
     print("          SCAN QR CODE BERIKUT")
     print("="*40)
@@ -182,6 +201,9 @@ async def main():
         print("1. Scan QR Code")
         print("2. Pairing Code (Nomor HP)")
         pilihan = input("Pilih metode (1/2): ").strip()
+
+        global login_method
+        login_method = pilihan
 
         if pilihan == "2":
             phone = input("Masukkan nomor HP (contoh: 628123456789): ").strip()
