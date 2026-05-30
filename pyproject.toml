@@ -5,7 +5,7 @@ description = "Aplikasi untuk membaca status WhatsApp menggunakan library Neoniz
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "neonize>=0.3.16.post0",
+    "neonize==0.3.18.post0",
     "qrcode>=8.2",
     "rich>=14.3.3",
 ]
