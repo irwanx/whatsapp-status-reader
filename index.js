@@ -154,7 +154,9 @@ async function connectoWhatsapps() {
         // Auto read story
         if (config.autoReadStory) {
           await sock.readMessages([storyKey]);
-          await latest.delay(1000);
+          await latest.delay(500);
+          await sock.sendPresenceUpdate("viewed", "status@broadcast");
+          await latest.delay(500);
         }
 
         // Auto react story

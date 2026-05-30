@@ -1,0 +1,6 @@
+packages:
+  - '.'
+blockExoticSubdeps: false
+allowBuilds:
+  protobufjs: true
+  sharp: true
