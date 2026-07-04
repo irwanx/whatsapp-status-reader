@@ -47,7 +47,7 @@ Pastikan Anda telah menginstal:
 ### 1. Klon Repositori ini
 
 ```bash
-git clone https://github.com/irwanx/whatsapp-status-reader.git
+git clone https://github.com/irwanx/whatsapp-status-reader.git --branch master
 ```
 
 ### 2. Persiapan Awal
